@@ -1,0 +1,31 @@
+MISTRAL_SUPPORTED_MODELS = [
+    "mistral-small-",
+    "mistral-medium-",
+    "magistral-small-",
+    "magistral-medium-",
+    "codestral-",
+    "mistral-ocr-",
+]
+
+OPENAI_SUPPORTED_MODELS = [
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-nano",
+    "gpt-oss-120b",
+    "gpt-oss-20b",
+    "gpt-vision-1",
+    "gpt-4o",
+]
+
+ANTHROPIC_SUPPORTED_MODELS = [
+    "claude-3-7-sonnet-",
+    "claude-4-opus-",
+    "claude-4-sonnet-",
+    "claude-opus-4.1",
+    "claude-code",
+]
+
+DEEPSEEK_SUPPORTED_MODELS = [
+    "deepseek-chat",
+    "deepseek-coder",
+]
