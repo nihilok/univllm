@@ -10,7 +10,7 @@ from .models import ProviderType
 from .exceptions import UniversalLLMError, ProviderError, ModelNotSupportedError
 from .supported_models import is_unsupported_model
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __all__ = [
     "UniversalLLMClient",
     "ProviderType",
