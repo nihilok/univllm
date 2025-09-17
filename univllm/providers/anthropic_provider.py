@@ -172,9 +172,10 @@ class AnthropicProvider(BaseLLMProvider):
             )
 
         try:
-            # Prepare the request data with streaming enabled
+            # Prepare the request data
             data = self.prepare_request(request)
-            data["stream"] = True
+            # Remove stream parameter as it's not needed for the stream() method
+            data.pop("stream", None)
 
             # Make the streaming API call
             async with self.client.messages.stream(**data) as stream:

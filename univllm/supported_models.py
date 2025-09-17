@@ -18,10 +18,9 @@ OPENAI_SUPPORTED_MODELS = [
 ]
 
 ANTHROPIC_SUPPORTED_MODELS = [
-    "claude-3-7-sonnet-",
-    "claude-4-opus-",
-    "claude-4-sonnet-",
-    "claude-opus-4.1",
+    "claude-3-7-sonnet",
+    "claude-sonnet-4-",
+    "claude-opus-4-1-",
     "claude-code",
 ]
 
