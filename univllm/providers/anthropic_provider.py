@@ -4,13 +4,13 @@ import os
 from typing import List, Optional, AsyncIterator, Dict
 import anthropic
 
-from .supported_models import ANTHROPIC_SUPPORTED_MODELS
+from ..supported_models import ANTHROPIC_SUPPORTED_MODELS
 from ..models import (
     CompletionRequest,
     CompletionResponse,
     ModelCapabilities,
-    ProviderType,
     MessageRole,
+    ProviderType,
 )
 from ..exceptions import ProviderError, ModelNotSupportedError, AuthenticationError
 from .base import BaseLLMProvider

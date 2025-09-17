@@ -5,9 +5,9 @@ from .models import (
     CompletionRequest,
     CompletionResponse,
     ModelCapabilities,
-    ProviderType,
     Message,
     MessageRole,
+    ProviderType,
 )
 from .providers import (
     BaseLLMProvider,

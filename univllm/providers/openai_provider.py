@@ -4,7 +4,7 @@ import os
 from typing import List, Optional, AsyncIterator
 import openai
 
-from .supported_models import OPENAI_SUPPORTED_MODELS
+from ..supported_models import OPENAI_SUPPORTED_MODELS
 from ..models import (
     CompletionRequest,
     CompletionResponse,

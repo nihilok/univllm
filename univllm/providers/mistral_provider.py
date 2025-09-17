@@ -5,7 +5,7 @@ import json
 from typing import List, Optional, AsyncIterator
 import httpx
 
-from .supported_models import MISTRAL_SUPPORTED_MODELS
+from ..supported_models import MISTRAL_SUPPORTED_MODELS
 from ..models import (
     CompletionRequest,
     CompletionResponse,

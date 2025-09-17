@@ -164,7 +164,8 @@ asyncio.run(main())
 
 ```python
 import asyncio
-from univllm import UniversalLLMClient, ProviderType
+from univllm import UniversalLLMClient
+from univllm.models import ProviderType
 
 
 async def main():

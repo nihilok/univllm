@@ -29,3 +29,17 @@ DEEPSEEK_SUPPORTED_MODELS = [
     "deepseek-chat",
     "deepseek-coder",
 ]
+
+
+def is_potentially_supported_model(model_name: str) -> bool:
+    all_supported_models = (
+        MISTRAL_SUPPORTED_MODELS
+        + OPENAI_SUPPORTED_MODELS
+        + ANTHROPIC_SUPPORTED_MODELS
+        + DEEPSEEK_SUPPORTED_MODELS
+    )
+    return any(model_name.startswith(prefix) for prefix in all_supported_models)
+
+
+def is_unsupported_model(model_name: str) -> bool:
+    return not is_potentially_supported_model(model_name)

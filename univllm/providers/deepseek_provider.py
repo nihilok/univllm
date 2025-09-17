@@ -5,7 +5,7 @@ import os
 from typing import List, Optional, AsyncIterator
 import httpx
 
-from .supported_models import DEEPSEEK_SUPPORTED_MODELS
+from ..supported_models import DEEPSEEK_SUPPORTED_MODELS
 from ..models import (
     CompletionRequest,
     CompletionResponse,

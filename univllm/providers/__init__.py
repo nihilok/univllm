@@ -13,5 +13,4 @@ __all__ = [
     "AnthropicProvider",
     "DeepseekProvider",
     "MistralProvider",
-    "ProviderType",
 ]

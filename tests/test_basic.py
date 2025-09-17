@@ -1,8 +1,8 @@
 """Basic tests for univllm package."""
 
 import pytest
-from univllm import UniversalLLMClient, ProviderType
-from univllm.models import ModelCapabilities, MessageRole, Message
+from univllm import UniversalLLMClient
+from univllm.models import ModelCapabilities, MessageRole, Message, ProviderType
 from univllm.exceptions import ModelNotSupportedError
 
 

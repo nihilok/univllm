@@ -1,8 +1,10 @@
 """Data models for LLM interactions."""
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
-from pydantic import BaseModel, Field
+from typing import Annotated, Any, Dict, List, Optional
+from pydantic import AfterValidator, BaseModel, Field
+
+from univllm.supported_models import is_potentially_supported_model
 
 
 class ProviderType(str, Enum):
@@ -40,11 +42,24 @@ class ModelCapabilities(BaseModel):
     context_window: Optional[int] = None
 
 
+def validate_supported_model(model: str) -> str:
+    """Validate that the model is potentially supported."""
+    if not is_potentially_supported_model(model):
+        raise ValueError(f"Model '{model}' is not supported")
+    return model
+
+
+AcceptedModel = Annotated[
+    str,
+    AfterValidator(validate_supported_model),
+]
+
+
 class CompletionRequest(BaseModel):
     """Request for text completion."""
 
     messages: List[Message]
-    model: str
+    model: AcceptedModel
     max_tokens: Optional[int] = None
     temperature: Optional[float] = None
     top_p: Optional[float] = None

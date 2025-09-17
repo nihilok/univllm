@@ -4,7 +4,8 @@ Examples demonstrating how to use the univllm package.
 
 import asyncio
 import os
-from univllm import UniversalLLMClient, ProviderType
+from univllm import UniversalLLMClient
+from univllm.models import ProviderType
 
 
 async def basic_completion_example():
