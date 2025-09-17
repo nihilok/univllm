@@ -35,7 +35,7 @@ Note: If you need additional model prefixes, you can locally extend the correspo
 ## Installation
 
 ```bash
-pip install assistants-core
+pip install univllm
 ```
 
 ## Quick Start
