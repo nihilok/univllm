@@ -50,23 +50,34 @@ class AnthropicProvider(BaseLLMProvider):
         # Default capabilities for Anthropic models
         capabilities = ModelCapabilities(
             supports_system_messages=True,
-            supports_function_calling=False,  # Anthropic doesn't support function calling yet
+            supports_function_calling=True,  # Claude models now support tool use
             supports_streaming=True,
             supports_vision=False,
         )
 
-        # Model-specific capabilities
-        if "claude-3" in model:
+        # Model-specific capabilities based on latest Anthropic specifications
+        if model.startswith("claude-3-7-sonnet"):
+            # Claude 3.7 Sonnet - enhanced version
             capabilities.context_window = 200000
-            capabilities.max_tokens = 4096
-            if "opus" in model or "sonnet" in model:
-                capabilities.supports_vision = True
-        elif "claude-2" in model:
-            capabilities.context_window = 100000
-            capabilities.max_tokens = 4096
-        elif "claude-instant" in model:
-            capabilities.context_window = 100000
-            capabilities.max_tokens = 4096
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
+        elif model.startswith("claude-sonnet-4-"):
+            # Claude Sonnet 4.x series - next generation
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
+        elif model.startswith("claude-opus-4-1-"):
+            # Claude Opus 4.1 series - most capable model
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
+        elif model.startswith("claude-code"):
+            # Claude Code - specialized for coding
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = False
+            # Enhanced function calling for code generation
+            capabilities.supports_function_calling = True
 
         return capabilities
 

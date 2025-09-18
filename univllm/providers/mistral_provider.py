@@ -59,25 +59,33 @@ class MistralProvider(BaseLLMProvider):
             supports_vision=False,
         )
 
-        # Model-specific capabilities
-        if "large" in model:
+        # Model-specific capabilities based on latest Mistral specifications
+        if model.startswith("mistral-small-"):
+            # Mistral Small series - efficient models
             capabilities.context_window = 32000
             capabilities.max_tokens = 8192
-        elif "medium" in model:
+        elif model.startswith("mistral-medium-"):
+            # Mistral Medium series - balanced performance
             capabilities.context_window = 32000
             capabilities.max_tokens = 8192
-        elif "small" in model:
+        elif model.startswith("magistral-small-"):
+            # Magistral Small series - specialized models
             capabilities.context_window = 32000
             capabilities.max_tokens = 8192
-        elif "tiny" in model:
+        elif model.startswith("magistral-medium-"):
+            # Magistral Medium series - enhanced capabilities
             capabilities.context_window = 32000
             capabilities.max_tokens = 8192
-        elif "mixtral" in model:
+        elif model.startswith("codestral-"):
+            # Codestral series - code-specialized models
             capabilities.context_window = 32000
             capabilities.max_tokens = 8192
-        elif "mistral-7b" in model:
+            capabilities.supports_function_calling = True  # Enhanced for code generation
+        elif model.startswith("mistral-ocr-"):
+            # Mistral OCR series - vision-capable models
             capabilities.context_window = 32000
             capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
 
         return capabilities
 

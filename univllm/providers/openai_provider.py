@@ -52,17 +52,39 @@ class OpenAIProvider(BaseLLMProvider):
             supports_system_messages=True,
             supports_function_calling=True,
             supports_streaming=True,
+            supports_vision=False,
         )
 
-        # Model-specific capabilities
-        if "gpt-4" in model:
-            capabilities.context_window = 8192 if "turbo" not in model else 128000
-            capabilities.max_tokens = 4096
-            if "vision" in model:
-                capabilities.supports_vision = True
-        elif "gpt-3.5-turbo" in model:
-            capabilities.context_window = 4096
-            capabilities.max_tokens = 4096
+        # Model-specific capabilities based on latest OpenAI specifications
+        if model.startswith("gpt-5"):
+            # GPT-5 series - advanced capabilities
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 16384
+            capabilities.supports_vision = True
+            if "mini" in model:
+                capabilities.context_window = 128000
+                capabilities.max_tokens = 8192
+            elif "nano" in model:
+                capabilities.context_window = 64000
+                capabilities.max_tokens = 4096
+        elif model.startswith("gpt-4o"):
+            # GPT-4o series - optimized models
+            capabilities.context_window = 128000
+            capabilities.max_tokens = 16384
+            capabilities.supports_vision = True
+        elif model.startswith("gpt-oss-"):
+            # Open source variants
+            if "120b" in model:
+                capabilities.context_window = 32000
+                capabilities.max_tokens = 8192
+            elif "20b" in model:
+                capabilities.context_window = 16000
+                capabilities.max_tokens = 4096
+        elif model.startswith("gpt-vision-"):
+            # Vision-specialized models
+            capabilities.context_window = 128000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
 
         return capabilities
 

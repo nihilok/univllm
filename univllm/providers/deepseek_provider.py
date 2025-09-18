@@ -51,17 +51,15 @@ class DeepseekProvider(BaseLLMProvider):
                 f"Model {model} is not supported by Deepseek provider"
             )
 
-        # Default capabilities for Deepseek models
-        capabilities = ModelCapabilities(
+        return ModelCapabilities(
             supports_system_messages=True,
-            supports_function_calling=False,
+            supports_function_calling=True,
             supports_streaming=True,
             supports_vision=False,
-            context_window=32000,
-            max_tokens=4096,
+            context_window=64000,
+            max_tokens=8192,
         )
 
-        return capabilities
 
     async def complete(self, request: CompletionRequest) -> CompletionResponse:
         """Generate a completion using Deepseek."""
