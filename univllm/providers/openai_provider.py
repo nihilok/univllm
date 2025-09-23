@@ -10,6 +10,9 @@ from ..models import (
     CompletionResponse,
     ModelCapabilities,
     ProviderType,
+    ImageGenerationRequest,
+    ImageGenerationResponse,
+    GeneratedImage,
 )
 from ..exceptions import ProviderError, ModelNotSupportedError, AuthenticationError
 from .base import BaseLLMProvider
@@ -84,6 +87,9 @@ class OpenAIProvider(BaseLLMProvider):
             # Vision-specialized models
             capabilities.context_window = 128000
             capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
+        elif model.startswith("gpt-image"):
+            # Image generation models - treat as vision capable
             capabilities.supports_vision = True
 
         return capabilities
@@ -164,3 +170,48 @@ class OpenAIProvider(BaseLLMProvider):
             raise ProviderError(f"OpenAI API error: {e}")
         except Exception as e:
             raise ProviderError(f"OpenAI provider error: {e}")
+
+    async def generate_image(
+        self, request: ImageGenerationRequest
+    ) -> ImageGenerationResponse:
+        """Generate image(s) using OpenAI image models."""
+        if not self.validate_model(request.model):
+            raise ModelNotSupportedError(
+                f"Model {request.model} is not supported by OpenAI provider"
+            )
+        if not request.model.startswith("gpt-image"):
+            raise ModelNotSupportedError(
+                f"Model {request.model} is not an image generation model"
+            )
+        try:
+            payload = {
+                "model": request.model,
+                "prompt": request.prompt,
+                "size": request.size,
+                "response_format": request.response_format,
+            }
+            payload.update(request.extra_params)
+            response = await self.client.images.generate(**payload)
+            images: List[GeneratedImage] = []
+            for item in getattr(response, "data", []):
+                images.append(
+                    GeneratedImage(
+                        b64_json=getattr(item, "b64_json", None),
+                        url=getattr(item, "url", None),
+                    )
+                )
+            return ImageGenerationResponse(
+                images=images,
+                model=getattr(response, "model", request.model),
+                provider=self.provider_type,
+                created=getattr(response, "created", None),
+                prompt=request.prompt,
+            )
+        except openai.AuthenticationError as e:
+            raise AuthenticationError(f"OpenAI authentication failed: {e}")
+        except openai.RateLimitError as e:
+            raise ProviderError(f"OpenAI rate limit exceeded: {e}")
+        except openai.APIError as e:
+            raise ProviderError(f"OpenAI API error: {e}")
+        except Exception as e:
+            raise ProviderError(f"OpenAI image generation error: {e}")

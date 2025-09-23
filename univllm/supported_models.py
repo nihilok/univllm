@@ -15,6 +15,8 @@ OPENAI_SUPPORTED_MODELS = [
     "gpt-oss-20b",
     "gpt-vision-1",
     "gpt-4o",
+    "gpt-image-1",  # added image generation model
+    "gpt-image",    # prefix to allow future variants
 ]
 
 ANTHROPIC_SUPPORTED_MODELS = [
