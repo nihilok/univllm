@@ -188,8 +188,11 @@ class OpenAIProvider(BaseLLMProvider):
                 "model": request.model,
                 "prompt": request.prompt,
                 "size": request.size,
-                "response_format": request.response_format,
             }
+
+            if not request.model.startswith("gpt-image-"):
+                payload["response_format"] = request.response_format
+
             payload.update(request.extra_params)
             response = await self.client.images.generate(**payload)
             images: List[GeneratedImage] = []
