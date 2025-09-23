@@ -94,6 +94,13 @@ class OpenAIProvider(BaseLLMProvider):
 
         return capabilities
 
+    def prepare_request(self, request: CompletionRequest) -> dict:
+        result = super().prepare_request(request)
+        max_tokens = result.pop("max_tokens", None)
+        if max_tokens:
+            result["max_completion_tokens"] = max_tokens
+        return result
+
     async def complete(self, request: CompletionRequest) -> CompletionResponse:
         """Generate a completion using OpenAI."""
         if not self.validate_model(request.model):
