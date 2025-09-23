@@ -79,11 +79,14 @@ class CompletionResponse(BaseModel):
 
 # --- Image generation models ---
 class ImageGenerationRequest(BaseModel):
-    """Request for image generation."""
+    """Request for image generation.
+
+    size is optional; provider will apply a model-specific default (e.g. 'auto' for gpt-image-1).
+    """
 
     prompt: str
     model: AcceptedModel
-    size: str = "512x512"
+    size: Optional[str] = None
     response_format: str = "b64_json"  # or 'url'
     extra_params: Dict[str, Any] = Field(default_factory=dict)
 

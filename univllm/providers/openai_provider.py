@@ -88,7 +88,7 @@ class OpenAIProvider(BaseLLMProvider):
             capabilities.context_window = 128000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
-        elif model.startswith("gpt-image"):
+        elif model.startswith("gpt-image") or model.startswith("dall-e-"):
             # Image generation models - treat as vision capable
             capabilities.supports_vision = True
 
@@ -174,25 +174,51 @@ class OpenAIProvider(BaseLLMProvider):
     async def generate_image(
         self, request: ImageGenerationRequest
     ) -> ImageGenerationResponse:
-        """Generate image(s) using OpenAI image models."""
-        if not self.validate_model(request.model):
+        """Generate image(s) using OpenAI image models with size validation.
+
+        Size rules (OpenAI as of Sep 2025):
+          gpt-image-1: auto (default), 1024x1024, 1536x1024, 1024x1536
+          dall-e-2: 256x256, 512x512, 1024x1024 (default 1024x1024 if omitted)
+          dall-e-3: 1024x1024, 1792x1024, 1024x1792 (default 1024x1024 if omitted)
+        """
+        model = request.model
+        if not self.validate_model(model):
             raise ModelNotSupportedError(
-                f"Model {request.model} is not supported by OpenAI provider"
+                f"Model {model} is not supported by OpenAI provider"
             )
-        if not request.model.startswith("gpt-image"):
+        if not (model.startswith("gpt-image") or model.startswith("dall-e-")):
             raise ModelNotSupportedError(
-                f"Model {request.model} is not an image generation model"
+                f"Model {model} is not an image generation model"
+            )
+        # Determine allowed sizes & defaults
+        if model.startswith("gpt-image"):
+            allowed = {"auto", "1024x1024", "1536x1024", "1024x1536"}
+            default_size = "auto"
+        elif model == "dall-e-2":
+            allowed = {"256x256", "512x512", "1024x1024"}
+            default_size = "1024x1024"
+        elif model == "dall-e-3":
+            allowed = {"1024x1024", "1792x1024", "1024x1792"}
+            default_size = "1024x1024"
+        else:  # future variants - don't enforce unless size provided
+            allowed = set()
+            default_size = None
+        size = request.size or default_size
+        if size and allowed and size not in allowed:
+            raise ModelNotSupportedError(
+                f"Invalid size '{size}' for model {model}. Allowed: {sorted(allowed)}"
             )
         try:
             payload = {
-                "model": request.model,
+                "model": model,
                 "prompt": request.prompt,
-                "size": request.size,
             }
-
-            if not request.model.startswith("gpt-image-"):
+            if size:
+                payload["size"] = size
+            # Only include response_format for DALL-E models; gpt-image-* currently rejects it.
+            if model.startswith("dall-e-") and request.response_format:
                 payload["response_format"] = request.response_format
-
+            # Merge extra params last
             payload.update(request.extra_params)
             response = await self.client.images.generate(**payload)
             images: List[GeneratedImage] = []
@@ -205,7 +231,7 @@ class OpenAIProvider(BaseLLMProvider):
                 )
             return ImageGenerationResponse(
                 images=images,
-                model=getattr(response, "model", request.model),
+                model=getattr(response, "model", model),
                 provider=self.provider_type,
                 created=getattr(response, "created", None),
                 prompt=request.prompt,
