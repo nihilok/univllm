@@ -8,6 +8,8 @@ from .models import (
     Message,
     MessageRole,
     ProviderType,
+    ImageGenerationRequest,
+    ImageGenerationResponse,
 )
 from .providers import (
     BaseLLMProvider,
@@ -262,3 +264,27 @@ class UniversalLLMClient:
 
         async for chunk in self.provider_instance.stream_complete(request):
             yield chunk
+
+    async def generate_image(
+        self,
+        prompt: str,
+        model: str,
+        provider: Optional[ProviderType] = None,
+        size: str = "512x512",
+        response_format: str = "b64_json",
+        **kwargs,
+    ) -> ImageGenerationResponse:
+        """Generate an image using a vision/image capable model."""
+        if not provider:
+            provider = self._auto_detect_provider(model)
+        if not self.provider_instance or self.provider_type != provider:
+            self._initialize_provider(provider, **self.config)
+        request = ImageGenerationRequest(
+            prompt=prompt,
+            model=model,
+            size=size,
+            response_format=response_format,
+            extra_params=kwargs,
+        )
+        # Provider must implement generate_image; base raises NotImplementedError
+        return await self.provider_instance.generate_image(request)

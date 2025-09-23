@@ -75,3 +75,31 @@ class CompletionResponse(BaseModel):
     usage: Optional[Dict[str, int]] = None
     finish_reason: Optional[str] = None
     provider: ProviderType
+
+
+# --- Image generation models ---
+class ImageGenerationRequest(BaseModel):
+    """Request for image generation."""
+
+    prompt: str
+    model: AcceptedModel
+    size: str = "512x512"
+    response_format: str = "b64_json"  # or 'url'
+    extra_params: Dict[str, Any] = Field(default_factory=dict)
+
+
+class GeneratedImage(BaseModel):
+    """Represents a single generated image payload."""
+
+    b64_json: Optional[str] = None
+    url: Optional[str] = None
+
+
+class ImageGenerationResponse(BaseModel):
+    """Response containing generated images."""
+
+    images: List[GeneratedImage]
+    model: str
+    provider: ProviderType
+    created: Optional[int] = None
+    prompt: str

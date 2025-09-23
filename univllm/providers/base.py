@@ -7,6 +7,8 @@ from ..models import (
     CompletionResponse,
     ModelCapabilities,
     ProviderType,
+    ImageGenerationRequest,
+    ImageGenerationResponse,
 )
 
 
@@ -78,6 +80,18 @@ class BaseLLMProvider(ABC):
             Chunks of the completion
         """
         pass
+
+    # --- Optional image generation interface ---
+    async def generate_image(
+        self, request: ImageGenerationRequest
+    ) -> ImageGenerationResponse:  # pragma: no cover - default impl
+        """Generate images for the given request.
+
+        Providers that support image generation should override this.
+        """
+        raise NotImplementedError(
+            f"Image generation not implemented for provider {self.provider_type}"
+        )
 
     def validate_model(self, model: str) -> bool:
         """Validate if a model is supported by this provider."""
