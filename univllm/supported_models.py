@@ -14,7 +14,7 @@ OPENAI_SUPPORTED_MODELS = [
     "gpt-oss-120b",
     "gpt-oss-20b",
     "gpt-vision-1",
-    "gpt-4o",
+    "gpt-4",
     "gpt-image-1",  # image generation model
     "gpt-image",    # future variants
     "dall-e-2",     # added DALL-E 2
