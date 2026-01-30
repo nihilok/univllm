@@ -102,15 +102,25 @@ class GeminiProvider(BaseLLMProvider):
             )
 
         try:
-            # Prepare the request
+            # Separate system messages from other messages
+            system_instruction = None
             messages_content = []
+            
             for msg in request.messages:
-                messages_content.append(
-                    {"role": msg.role.value if msg.role.value != "assistant" else "model", 
-                     "parts": [{"text": msg.content}]}
-                )
+                if msg.role.value == "system":
+                    # Use the last system message as system_instruction
+                    system_instruction = msg.content
+                else:
+                    # Convert 'assistant' to 'model' for Gemini API
+                    role = "model" if msg.role.value == "assistant" else msg.role.value
+                    messages_content.append(
+                        {"role": role, "parts": [{"text": msg.content}]}
+                    )
 
+            # Configure generation parameters
             config = types.GenerateContentConfig()
+            if system_instruction:
+                config.system_instruction = system_instruction
             if request.max_tokens is not None:
                 config.max_output_tokens = request.max_tokens
             if request.temperature is not None:
@@ -169,15 +179,25 @@ class GeminiProvider(BaseLLMProvider):
             )
 
         try:
-            # Prepare the request
+            # Separate system messages from other messages
+            system_instruction = None
             messages_content = []
+            
             for msg in request.messages:
-                messages_content.append(
-                    {"role": msg.role.value if msg.role.value != "assistant" else "model", 
-                     "parts": [{"text": msg.content}]}
-                )
+                if msg.role.value == "system":
+                    # Use the last system message as system_instruction
+                    system_instruction = msg.content
+                else:
+                    # Convert 'assistant' to 'model' for Gemini API
+                    role = "model" if msg.role.value == "assistant" else msg.role.value
+                    messages_content.append(
+                        {"role": role, "parts": [{"text": msg.content}]}
+                    )
 
+            # Configure generation parameters
             config = types.GenerateContentConfig()
+            if system_instruction:
+                config.system_instruction = system_instruction
             if request.max_tokens is not None:
                 config.max_output_tokens = request.max_tokens
             if request.temperature is not None:

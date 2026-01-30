@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/univllm.svg)](https://badge.fury.io/py/univllm)
 
-A universal Python package that provides a standardised interface for different LLM providers including OpenAI, Anthropic, Deepseek, and Mistral.
+A universal Python package that provides a standardised interface for different LLM providers including OpenAI, Anthropic, Deepseek, Mistral, and Gemini.
 
 ## Features
 
@@ -19,6 +19,7 @@ A universal Python package that provides a standardised interface for different 
 - **Anthropic**: Claude 3.x / 4.x family models  
 - **Deepseek**: Deepseek Chat, Deepseek Coder
 - **Mistral**: Mistral, Magistral & Codestral models
+- **Gemini**: Google Gemini 1.5, 2.0, 2.5 & 3.x family models
 
 ### Supported Model Prefixes
 The library validates models using simple prefix matching (see `SUPPORTED_MODELS` lists). Any model string that begins with one of these prefixes will be accepted. Provider-specific suffixes or date/version tags (e.g. `-20240229`, `-latest`, `-0125`, minor patch tags) are allowed but not individually validated.
@@ -29,6 +30,7 @@ The library validates models using simple prefix matching (see `SUPPORTED_MODELS
 | Anthropic | `claude-3-7-sonnet-`, `claude-4-opus-`, `claude-4-sonnet-`, `claude-opus-4.1`, `claude-code`               | Older variants (e.g. dated `claude-3-*` forms) can be added by extending the list in supported_models.py. |
 | Deepseek | `deepseek-chat`, `deepseek-coder`                                                                          | Code vs chat optimized.                                                                                   |
 | Mistral | `mistral-small-`, `mistral-medium-`, `magistral-small-`, `magistral-medium-`, `codestral-`, `mistral-ocr-` | E.g. `mistral-small-latest`                                                                                |
+| Gemini | `gemini-3-pro`, `gemini-3-flash`, `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro`, `gemini-1.5-flash` | Google's Gemini models across multiple versions. |
 
 Note: If you need additional model prefixes, you can locally extend the corresponding `SUPPORTED_MODELS` list in `univllm/providers/supported_models.py` or contribute a PR.
 
@@ -69,6 +71,7 @@ export OPENAI_API_KEY="your-openai-key"
 export ANTHROPIC_API_KEY="your-anthropic-key"
 export DEEPSEEK_API_KEY="your-deepseek-key"
 export MISTRAL_API_KEY="your-mistral-key"
+export GEMINI_API_KEY="your-gemini-key"
 ```
 
 Or pass them directly:
