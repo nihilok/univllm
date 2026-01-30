@@ -56,18 +56,38 @@ class AnthropicProvider(BaseLLMProvider):
         )
 
         # Model-specific capabilities based on latest Anthropic specifications
-        if model.startswith("claude-3-7-sonnet"):
-            # Claude 3.7 Sonnet - enhanced version
+        if model.startswith("claude-opus-4-5"):
+            # Claude Opus 4.5 - most capable model (Nov 2025)
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 64000
+            capabilities.supports_vision = True
+        elif model.startswith("claude-sonnet-4-5"):
+            # Claude Sonnet 4.5 - balanced intelligence and speed (Sep 2025)
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 64000
+            capabilities.supports_vision = True
+        elif model.startswith("claude-haiku-4-5"):
+            # Claude Haiku 4.5 - fast and cost-effective (Oct 2025)
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 64000
+            capabilities.supports_vision = True
+        elif model.startswith("claude-opus-4.1") or model.startswith("claude-opus-4-"):
+            # Claude Opus 4.x series - previous generation
             capabilities.context_window = 200000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
         elif model.startswith("claude-sonnet-4-"):
-            # Claude Sonnet 4.x series - next generation
+            # Claude Sonnet 4.x series - previous generation
             capabilities.context_window = 200000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
-        elif model.startswith("claude-opus-4-1-"):
-            # Claude Opus 4.1 series - most capable model
+        elif model.startswith("claude-haiku-4-"):
+            # Claude Haiku 4.x series - previous generation
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
+        elif model.startswith("claude-3-7-sonnet"):
+            # Claude 3.7 Sonnet - legacy enhanced version
             capabilities.context_window = 200000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True

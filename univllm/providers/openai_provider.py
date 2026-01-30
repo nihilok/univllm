@@ -59,7 +59,25 @@ class OpenAIProvider(BaseLLMProvider):
         )
 
         # Model-specific capabilities based on latest OpenAI specifications
-        if model.startswith("gpt-5"):
+        if model.startswith("gpt-5.2"):
+            # GPT-5.2 series - latest flagship (Dec 2025)
+            capabilities.context_window = 400000
+            capabilities.max_tokens = 128000
+            capabilities.supports_vision = True
+            if "instant" in model:
+                capabilities.max_tokens = 64000
+            elif "thinking" in model or "pro" in model:
+                # Enhanced reasoning versions
+                capabilities.max_tokens = 128000
+            elif "codex" in model:
+                # Code-specialized version
+                capabilities.max_tokens = 128000
+        elif model.startswith("gpt-5.1"):
+            # GPT-5.1 series - previous flagship
+            capabilities.context_window = 300000
+            capabilities.max_tokens = 64000
+            capabilities.supports_vision = True
+        elif model.startswith("gpt-5"):
             # GPT-5 series - advanced capabilities
             capabilities.context_window = 200000
             capabilities.max_tokens = 16384
