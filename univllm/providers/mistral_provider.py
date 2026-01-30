@@ -108,12 +108,8 @@ class MistralProvider(BaseLLMProvider):
             capabilities.context_window = 64000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
-        elif model.startswith("mistral-small-"):
-            # Legacy Mistral Small series
-            capabilities.context_window = 32000
-            capabilities.max_tokens = 8192
-        elif model.startswith("mistral-medium-"):
-            # Legacy Mistral Medium series
+        elif model.startswith("mistral-small-") or model.startswith("mistral-medium-"):
+            # Legacy Mistral Small/Medium series
             capabilities.context_window = 32000
             capabilities.max_tokens = 8192
 

@@ -37,10 +37,9 @@ ANTHROPIC_SUPPORTED_MODELS = [
     "claude-opus-4-5",
     "claude-sonnet-4-5",
     "claude-haiku-4-5",
-    "claude-opus-4.1",
+    "claude-opus-4-",
     "claude-sonnet-4-",
     "claude-haiku-4-",
-    "claude-opus-4-",
     "claude-code",
     # Legacy models
     "claude-3-7-sonnet-",

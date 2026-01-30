@@ -30,7 +30,7 @@ The library validates models using simple prefix matching (see `SUPPORTED_MODELS
 | Deepseek | `deepseek-chat`, `deepseek-reasoner`, `deepseek-coder`, `deepseek-vl`, `deepseek-v3`                                                                                        | DeepSeek V3.2 models. `deepseek-reasoner` for advanced reasoning tasks. `deepseek-vl` for vision-language.                                                                                   |
 | Mistral | `mistral-large-3`, `mistral-medium-3`, `mistral-small-3`, `ministral-3-`, `magistral-medium-`, `magistral-small-`, `codestral-`, `devstral-`, `voxtral-`, `mistral-ocr-`, `ocr-3-` | Mistral Large 3 (Dec 2025) flagship multimodal model. Ministral for edge, Codestral for code generation.                                                                                |
 
-Note: If you need additional model prefixes, you can locally extend the corresponding `SUPPORTED_MODELS` list in `univllm/providers/supported_models.py` or contribute a PR.
+Note: If you need additional model prefixes, you can locally extend the corresponding `SUPPORTED_MODELS` list in `univllm/supported_models.py` or contribute a PR.
 
 ## Installation
 
