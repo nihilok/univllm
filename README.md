@@ -9,6 +9,7 @@ A universal Python package that provides a standardised interface for different 
 - **Universal Interface**: Single API to interact with multiple LLM providers
 - **Auto-Detection**: Automatically detect the appropriate provider based on model name
 - **Streaming Support**: Stream completions from all supported providers
+- **MCP Tool Calling**: Compatible with Model Context Protocol (MCP) for function/tool calling
 - **Model Capabilities**: Query model capabilities like context window, function calling support, etc.
 - **Error Handling**: Comprehensive error handling with provider-specific exceptions
 - **Async Support**: Fully asynchronous API for better performance
@@ -159,6 +160,84 @@ async def main():
 
 asyncio.run(main())
 ```
+
+### Tool Calling (MCP Compatible)
+
+univllm supports function/tool calling following the Model Context Protocol (MCP) format:
+
+```python
+import asyncio
+from univllm import UniversalLLMClient, ToolDefinition
+
+
+async def main():
+    client = UniversalLLMClient()
+
+    # Define a tool using MCP format
+    weather_tool = ToolDefinition(
+        name="get_weather",
+        description="Get current weather for a location",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "City name or zip code"
+                }
+            },
+            "required": ["location"]
+        }
+    )
+
+    # Request with tools
+    response = await client.complete(
+        messages=[{"role": "user", "content": "What's the weather in Paris?"}],
+        model="gpt-4o",
+        tools=[weather_tool],
+        tool_choice="auto"  # Let the model decide when to use tools
+    )
+
+    # Check if model wants to call a tool
+    if response.tool_calls:
+        tool_call = response.tool_calls[0]
+        print(f"Tool: {tool_call.name}")
+        print(f"Arguments: {tool_call.arguments}")
+        
+        # Execute the tool and get result
+        # ... your tool execution logic ...
+        
+        # Continue conversation with tool result
+        # ... send tool result back to model ...
+
+
+asyncio.run(main())
+```
+
+You can also pass tools as dictionaries:
+
+```python
+tools = [
+    {
+        "name": "calculate",
+        "description": "Perform arithmetic calculations",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "expression": {"type": "string"}
+            },
+            "required": ["expression"]
+        }
+    }
+]
+
+response = await client.complete(
+    messages=[{"role": "user", "content": "Calculate 15 * 23"}],
+    model="gpt-4o",
+    tools=tools
+)
+```
+
+See `examples_tool_calling.py` for more comprehensive examples.
 
 ### Multiple Providers
 
