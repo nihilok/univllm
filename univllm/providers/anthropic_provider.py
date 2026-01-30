@@ -114,6 +114,19 @@ class AnthropicProvider(BaseLLMProvider):
         if request.stream:
             data["stream"] = request.stream
 
+        # Add tools if provided (Anthropic format)
+        if request.tools:
+            data["tools"] = [
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "input_schema": tool.input_schema,
+                }
+                for tool in request.tools
+            ]
+            if request.tool_choice:
+                data["tool_choice"] = {"type": request.tool_choice}
+
         # Add any extra parameters
         data.update(request.extra_params)
 
@@ -135,10 +148,36 @@ class AnthropicProvider(BaseLLMProvider):
 
             # Extract the response
             content = ""
+            tool_calls = None
+            
             if response.content:
-                content = " ".join(
-                    [block.text for block in response.content if hasattr(block, "text")]
-                )
+                from ..models import ToolCall
+                text_blocks = []
+                tool_use_blocks = []
+                
+                for block in response.content:
+                    # Check for text blocks first
+                    if hasattr(block, "type") and block.type == "text" and hasattr(block, "text"):
+                        text_blocks.append(block.text)
+                    elif hasattr(block, "type") and block.type == "tool_use":
+                        tool_use_blocks.append(block)
+                    elif hasattr(block, "text") and not hasattr(block, "type"):
+                        # Fallback for blocks with text but no type attribute
+                        text_blocks.append(block.text)
+                
+                content = " ".join(text_blocks)
+                
+                # Process tool use blocks
+                if tool_use_blocks:
+                    tool_calls = []
+                    for tool_block in tool_use_blocks:
+                        tool_calls.append(
+                            ToolCall(
+                                id=tool_block.id,
+                                name=tool_block.name,
+                                arguments=tool_block.input if hasattr(tool_block, "input") else {}
+                            )
+                        )
 
             usage = (
                 {
@@ -164,6 +203,7 @@ class AnthropicProvider(BaseLLMProvider):
                 usage=usage,
                 finish_reason=response.stop_reason,
                 provider=self.provider_type,
+                tool_calls=tool_calls,
             )
 
         except anthropic.AuthenticationError as e:

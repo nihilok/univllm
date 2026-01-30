@@ -31,6 +31,35 @@ class Message(BaseModel):
     content: str
 
 
+class ToolDefinition(BaseModel):
+    """Definition of a tool/function that can be called by the LLM.
+    
+    This follows the MCP (Model Context Protocol) format for tool definitions.
+    """
+
+    name: str
+    description: str
+    input_schema: Dict[str, Any] = Field(
+        description="JSON Schema defining the tool's input parameters"
+    )
+
+
+class ToolCall(BaseModel):
+    """Represents a tool call requested by the LLM."""
+
+    id: Optional[str] = None
+    name: str
+    arguments: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ToolResult(BaseModel):
+    """Result from executing a tool call."""
+
+    tool_call_id: Optional[str] = None
+    content: str
+    is_error: bool = False
+
+
 class ModelCapabilities(BaseModel):
     """Capabilities of a specific model."""
 
@@ -64,6 +93,8 @@ class CompletionRequest(BaseModel):
     temperature: Optional[float] = None
     top_p: Optional[float] = None
     stream: bool = False
+    tools: Optional[List[ToolDefinition]] = None
+    tool_choice: Optional[str] = None  # "auto", "none", or specific tool name
     extra_params: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -75,6 +106,7 @@ class CompletionResponse(BaseModel):
     usage: Optional[Dict[str, int]] = None
     finish_reason: Optional[str] = None
     provider: ProviderType
+    tool_calls: Optional[List[ToolCall]] = None
 
 
 # --- Image generation models ---

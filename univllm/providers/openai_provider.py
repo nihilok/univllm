@@ -99,6 +99,23 @@ class OpenAIProvider(BaseLLMProvider):
         max_tokens = result.pop("max_tokens", None)
         if max_tokens:
             result["max_completion_tokens"] = max_tokens
+        
+        # Add tools if provided (OpenAI format)
+        if request.tools:
+            result["tools"] = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.input_schema,
+                    }
+                }
+                for tool in request.tools
+            ]
+            if request.tool_choice:
+                result["tool_choice"] = request.tool_choice
+        
         return result
 
     async def complete(self, request: CompletionRequest) -> CompletionResponse:
@@ -116,7 +133,32 @@ class OpenAIProvider(BaseLLMProvider):
             response = await self.client.chat.completions.create(**data)
 
             # Extract the response
-            content = response.choices[0].message.content or ""
+            message = response.choices[0].message
+            content = message.content or ""
+            
+            # Extract tool calls if present
+            tool_calls = None
+            if hasattr(message, 'tool_calls') and message.tool_calls:
+                from ..models import ToolCall
+                import json
+                tool_calls = []
+                for tc in message.tool_calls:
+                    # Parse the arguments (they come as JSON string from OpenAI)
+                    args = {}
+                    if tc.function.arguments:
+                        try:
+                            args = json.loads(tc.function.arguments)
+                        except json.JSONDecodeError:
+                            args = {}
+                    
+                    tool_calls.append(
+                        ToolCall(
+                            id=tc.id,
+                            name=tc.function.name,
+                            arguments=args
+                        )
+                    )
+            
             usage = (
                 {
                     "prompt_tokens": response.usage.prompt_tokens
@@ -139,6 +181,7 @@ class OpenAIProvider(BaseLLMProvider):
                 usage=usage,
                 finish_reason=response.choices[0].finish_reason,
                 provider=self.provider_type,
+                tool_calls=tool_calls,
             )
 
         except openai.AuthenticationError as e:
