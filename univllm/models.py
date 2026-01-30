@@ -14,6 +14,7 @@ class ProviderType(str, Enum):
     ANTHROPIC = "anthropic"
     DEEPSEEK = "deepseek"
     MISTRAL = "mistral"
+    GEMINI = "gemini"
 
 
 class MessageRole(str, Enum):
