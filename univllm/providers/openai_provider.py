@@ -1,6 +1,7 @@
 """OpenAI provider implementation."""
 
 import os
+import json
 from typing import List, Optional, AsyncIterator
 import openai
 
@@ -13,6 +14,7 @@ from ..models import (
     ImageGenerationRequest,
     ImageGenerationResponse,
     GeneratedImage,
+    ToolCall,
 )
 from ..exceptions import ProviderError, ModelNotSupportedError, AuthenticationError
 from .base import BaseLLMProvider
@@ -139,8 +141,6 @@ class OpenAIProvider(BaseLLMProvider):
             # Extract tool calls if present
             tool_calls = None
             if hasattr(message, 'tool_calls') and message.tool_calls:
-                from ..models import ToolCall
-                import json
                 tool_calls = []
                 for tc in message.tool_calls:
                     # Parse the arguments (they come as JSON string from OpenAI)
@@ -148,8 +148,10 @@ class OpenAIProvider(BaseLLMProvider):
                     if tc.function.arguments:
                         try:
                             args = json.loads(tc.function.arguments)
-                        except json.JSONDecodeError:
-                            args = {}
+                        except json.JSONDecodeError as e:
+                            # Log warning but continue with empty args
+                            # In production, consider logging this error
+                            args = {"_parse_error": str(e), "_raw": tc.function.arguments}
                     
                     tool_calls.append(
                         ToolCall(

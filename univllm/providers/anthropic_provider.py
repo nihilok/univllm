@@ -11,6 +11,7 @@ from ..models import (
     ModelCapabilities,
     MessageRole,
     ProviderType,
+    ToolCall,
 )
 from ..exceptions import ProviderError, ModelNotSupportedError, AuthenticationError
 from .base import BaseLLMProvider
@@ -125,7 +126,12 @@ class AnthropicProvider(BaseLLMProvider):
                 for tool in request.tools
             ]
             if request.tool_choice:
-                data["tool_choice"] = {"type": request.tool_choice}
+                # Handle different tool_choice values
+                if request.tool_choice in ("auto", "any", "none"):
+                    data["tool_choice"] = {"type": request.tool_choice}
+                else:
+                    # Assume it's a specific tool name
+                    data["tool_choice"] = {"type": "tool", "name": request.tool_choice}
 
         # Add any extra parameters
         data.update(request.extra_params)
@@ -151,7 +157,6 @@ class AnthropicProvider(BaseLLMProvider):
             tool_calls = None
             
             if response.content:
-                from ..models import ToolCall
                 text_blocks = []
                 tool_use_blocks = []
                 

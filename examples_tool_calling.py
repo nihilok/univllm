@@ -90,8 +90,20 @@ def execute_tool(tool_name: str, arguments: dict) -> str:
     elif tool_name == "calculate":
         expression = arguments.get("expression")
         try:
-            result = eval(expression)  # Note: Use a safe evaluator in production!
-            return f"Result: {result}"
+            # NOTE: In production, use a safe expression evaluator like simpleeval
+            # or ast.literal_eval for simple cases. Never use eval() with user input!
+            # This is for demonstration purposes only.
+            # Example safe alternative: from simpleeval import simple_eval
+            # result = simple_eval(expression)
+            
+            # For this example, we'll use a restricted approach
+            # Only allow basic arithmetic with numbers
+            import re
+            if re.match(r'^[\d\s\+\-\*\/\(\)\.]+$', expression):
+                result = eval(expression)  # Still not ideal, but safer with validation
+                return f"Result: {result}"
+            else:
+                return "Error: Expression contains disallowed characters"
         except Exception as e:
             return f"Error calculating: {e}"
     
