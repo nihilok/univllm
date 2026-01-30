@@ -60,32 +60,58 @@ class MistralProvider(BaseLLMProvider):
         )
 
         # Model-specific capabilities based on latest Mistral specifications
-        if model.startswith("mistral-small-"):
-            # Mistral Small series - efficient models
-            capabilities.context_window = 32000
-            capabilities.max_tokens = 8192
-        elif model.startswith("mistral-medium-"):
-            # Mistral Medium series - balanced performance
-            capabilities.context_window = 32000
-            capabilities.max_tokens = 8192
-        elif model.startswith("magistral-small-"):
-            # Magistral Small series - specialized models
-            capabilities.context_window = 32000
-            capabilities.max_tokens = 8192
-        elif model.startswith("magistral-medium-"):
-            # Magistral Medium series - enhanced capabilities
-            capabilities.context_window = 32000
-            capabilities.max_tokens = 8192
-        elif model.startswith("codestral-"):
-            # Codestral series - code-specialized models
-            capabilities.context_window = 32000
-            capabilities.max_tokens = 8192
-            capabilities.supports_function_calling = True  # Enhanced for code generation
-        elif model.startswith("mistral-ocr-"):
-            # Mistral OCR series - vision-capable models
-            capabilities.context_window = 32000
+        if model.startswith("mistral-large-3"):
+            # Mistral Large 3 - flagship multimodal model (Dec 2025)
+            capabilities.context_window = 256000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
+        elif model.startswith("mistral-medium-3"):
+            # Mistral Medium 3 series - balanced performance
+            capabilities.context_window = 128000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
+        elif model.startswith("mistral-small-3"):
+            # Mistral Small 3 series - efficient models
+            capabilities.context_window = 128000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
+        elif model.startswith("ministral-3-"):
+            # Ministral 3 series - compact models for edge
+            capabilities.context_window = 128000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
+        elif model.startswith("magistral-medium-"):
+            # Magistral Medium series - reasoning optimized
+            capabilities.context_window = 128000
+            capabilities.max_tokens = 8192
+        elif model.startswith("magistral-small-"):
+            # Magistral Small series - reasoning optimized
+            capabilities.context_window = 64000
+            capabilities.max_tokens = 8192
+        elif model.startswith("codestral-"):
+            # Codestral series - code-specialized models (Jan 2025)
+            capabilities.context_window = 64000
+            capabilities.max_tokens = 8192
+            capabilities.supports_function_calling = True  # Enhanced for code generation
+        elif model.startswith("devstral-"):
+            # Devstral series - code agents
+            capabilities.context_window = 64000
+            capabilities.max_tokens = 8192
+            capabilities.supports_function_calling = True
+        elif model.startswith("voxtral-"):
+            # Voxtral series - audio/speech models
+            capabilities.context_window = 64000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = False
+        elif model.startswith("mistral-ocr-") or model.startswith("ocr-3-"):
+            # Mistral OCR series - document OCR models
+            capabilities.context_window = 64000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
+        elif model.startswith("mistral-small-") or model.startswith("mistral-medium-"):
+            # Legacy Mistral Small/Medium series
+            capabilities.context_window = 32000
+            capabilities.max_tokens = 8192
 
         return capabilities
 

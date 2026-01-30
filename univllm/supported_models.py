@@ -1,19 +1,31 @@
 MISTRAL_SUPPORTED_MODELS = [
+    "mistral-large-3",
+    "mistral-medium-3",
+    "mistral-small-3",
+    "ministral-3-",
+    "magistral-medium-",
+    "magistral-small-",
+    "codestral-",
+    "devstral-",
+    "voxtral-",
+    "mistral-ocr-",
+    "ocr-3-",
+    # Legacy models
     "mistral-small-",
     "mistral-medium-",
-    "magistral-small-",
-    "magistral-medium-",
-    "codestral-",
-    "mistral-ocr-",
 ]
 
 OPENAI_SUPPORTED_MODELS = [
+    "gpt-5.2",
+    "gpt-5.1",
     "gpt-5",
     "gpt-5-mini",
     "gpt-5-nano",
+    "gpt-5-codex",
     "gpt-oss-120b",
     "gpt-oss-20b",
     "gpt-vision-1",
+    "gpt-4o",
     "gpt-4",
     "gpt-image-1",  # image generation model
     "gpt-image",    # future variants
@@ -22,16 +34,24 @@ OPENAI_SUPPORTED_MODELS = [
 ]
 
 ANTHROPIC_SUPPORTED_MODELS = [
-    "claude-3-5-sonnet-",
-    "claude-3-7-sonnet-",
+    "claude-opus-4-5",
+    "claude-sonnet-4-5",
+    "claude-haiku-4-5",
+    "claude-opus-4-",
     "claude-sonnet-4-",
-    "claude-opus-4-1-",
+    "claude-haiku-4-",
     "claude-code",
+    # Legacy models
+    "claude-3-7-sonnet-",
+    "claude-3-5-sonnet-",
 ]
 
 DEEPSEEK_SUPPORTED_MODELS = [
     "deepseek-chat",
+    "deepseek-reasoner",
     "deepseek-coder",
+    "deepseek-vl",
+    "deepseek-v3",
 ]
 
 
