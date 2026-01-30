@@ -50,7 +50,7 @@ def test_auto_detection():
     assert client._auto_detect_provider("mixtral-8x7b") == ProviderType.MISTRAL
 
     # Test Gemini models
-    assert client._auto_detect_provider("gemini-3-pro") == ProviderType.GEMINI
+    assert client._auto_detect_provider("gemini-2.5-pro") == ProviderType.GEMINI
     assert client._auto_detect_provider("gemini-2.5-flash") == ProviderType.GEMINI
 
 

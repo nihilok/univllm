@@ -1,7 +1,7 @@
 """Gemini provider implementation."""
 
 import os
-from typing import List, Optional, AsyncIterator
+from typing import List, Optional, AsyncIterator, Dict, Tuple
 from google import genai
 from google.genai import types
 
@@ -10,6 +10,7 @@ from ..models import (
     CompletionRequest,
     CompletionResponse,
     ModelCapabilities,
+    MessageRole,
     ProviderType,
 )
 from ..exceptions import ProviderError, ModelNotSupportedError, AuthenticationError
@@ -40,6 +41,43 @@ class GeminiProvider(BaseLLMProvider):
         """Return the provider type."""
         return ProviderType.GEMINI
 
+    def _prepare_messages_and_config(
+        self, request: CompletionRequest
+    ) -> Tuple[List[Dict], types.GenerateContentConfig]:
+        """Prepare messages and configuration for Gemini API.
+
+        Args:
+            request: Completion request
+
+        Returns:
+            Tuple of (messages_content, config)
+        """
+        # Separate system messages from other messages
+        system_instruction = None
+        messages_content = []
+
+        for msg in request.messages:
+            if msg.role == MessageRole.SYSTEM:
+                # Use the last system message as system_instruction
+                system_instruction = msg.content
+            else:
+                # Convert 'assistant' to 'model' for Gemini API
+                role = "model" if msg.role == MessageRole.ASSISTANT else msg.role.value
+                messages_content.append({"role": role, "parts": [{"text": msg.content}]})
+
+        # Configure generation parameters
+        config = types.GenerateContentConfig()
+        if system_instruction:
+            config.system_instruction = system_instruction
+        if request.max_tokens is not None:
+            config.max_output_tokens = request.max_tokens
+        if request.temperature is not None:
+            config.temperature = request.temperature
+        if request.top_p is not None:
+            config.top_p = request.top_p
+
+        return messages_content, config
+
     def get_model_capabilities(self, model: str) -> ModelCapabilities:
         """Get capabilities for a specific Gemini model."""
         if not self.validate_model(model):
@@ -56,17 +94,7 @@ class GeminiProvider(BaseLLMProvider):
         )
 
         # Model-specific capabilities based on latest Gemini specifications
-        if model.startswith("gemini-3-pro"):
-            # Gemini 3 Pro - flagship model
-            capabilities.context_window = 2000000
-            capabilities.max_tokens = 8192
-            capabilities.supports_vision = True
-        elif model.startswith("gemini-3-flash"):
-            # Gemini 3 Flash - balanced model
-            capabilities.context_window = 1000000
-            capabilities.max_tokens = 8192
-            capabilities.supports_vision = True
-        elif model.startswith("gemini-2.5-pro"):
+        if model.startswith("gemini-2.5-pro"):
             # Gemini 2.5 Pro - advanced reasoning
             capabilities.context_window = 1000000
             capabilities.max_tokens = 8192
@@ -102,56 +130,35 @@ class GeminiProvider(BaseLLMProvider):
             )
 
         try:
-            # Separate system messages from other messages
-            system_instruction = None
-            messages_content = []
-            
-            for msg in request.messages:
-                if msg.role.value == "system":
-                    # Use the last system message as system_instruction
-                    system_instruction = msg.content
-                else:
-                    # Convert 'assistant' to 'model' for Gemini API
-                    role = "model" if msg.role.value == "assistant" else msg.role.value
-                    messages_content.append(
-                        {"role": role, "parts": [{"text": msg.content}]}
-                    )
+            # Prepare messages and configuration
+            messages_content, config = self._prepare_messages_and_config(request)
 
-            # Configure generation parameters
-            config = types.GenerateContentConfig()
-            if system_instruction:
-                config.system_instruction = system_instruction
-            if request.max_tokens is not None:
-                config.max_output_tokens = request.max_tokens
-            if request.temperature is not None:
-                config.temperature = request.temperature
-            if request.top_p is not None:
-                config.top_p = request.top_p
-
-            # Make the API call
-            response = self.client.models.generate_content(
+            # Make the API call using async interface
+            response = await self.client.aio.models.generate_content(
                 model=request.model,
                 contents=messages_content,
                 config=config,
             )
 
             # Extract the response
-            content = response.text if hasattr(response, 'text') else ""
-            
+            content = response.text if hasattr(response, "text") else ""
+
             # Extract usage information if available
             usage = None
-            if hasattr(response, 'usage_metadata'):
+            if hasattr(response, "usage_metadata"):
                 usage_metadata = response.usage_metadata
                 usage = {
-                    "prompt_tokens": getattr(usage_metadata, 'prompt_token_count', 0),
-                    "completion_tokens": getattr(usage_metadata, 'candidates_token_count', 0),
-                    "total_tokens": getattr(usage_metadata, 'total_token_count', 0),
+                    "prompt_tokens": getattr(usage_metadata, "prompt_token_count", 0),
+                    "completion_tokens": getattr(
+                        usage_metadata, "candidates_token_count", 0
+                    ),
+                    "total_tokens": getattr(usage_metadata, "total_token_count", 0),
                 }
 
             finish_reason = None
-            if hasattr(response, 'candidates') and response.candidates:
+            if hasattr(response, "candidates") and response.candidates:
                 candidate = response.candidates[0]
-                if hasattr(candidate, 'finish_reason'):
+                if hasattr(candidate, "finish_reason"):
                     finish_reason = str(candidate.finish_reason)
 
             return CompletionResponse(
@@ -164,9 +171,9 @@ class GeminiProvider(BaseLLMProvider):
 
         except Exception as e:
             error_str = str(e).lower()
-            if "api key" in error_str or "auth" in error_str:
+            if "api key" in error_str or "auth" in error_str or "401" in error_str:
                 raise AuthenticationError(f"Gemini authentication failed: {e}")
-            elif "quota" in error_str or "rate" in error_str:
+            elif "quota" in error_str or "rate" in error_str or "429" in error_str:
                 raise ProviderError(f"Gemini rate limit exceeded: {e}")
             else:
                 raise ProviderError(f"Gemini provider error: {e}")
@@ -179,48 +186,25 @@ class GeminiProvider(BaseLLMProvider):
             )
 
         try:
-            # Separate system messages from other messages
-            system_instruction = None
-            messages_content = []
-            
-            for msg in request.messages:
-                if msg.role.value == "system":
-                    # Use the last system message as system_instruction
-                    system_instruction = msg.content
-                else:
-                    # Convert 'assistant' to 'model' for Gemini API
-                    role = "model" if msg.role.value == "assistant" else msg.role.value
-                    messages_content.append(
-                        {"role": role, "parts": [{"text": msg.content}]}
-                    )
+            # Prepare messages and configuration
+            messages_content, config = self._prepare_messages_and_config(request)
 
-            # Configure generation parameters
-            config = types.GenerateContentConfig()
-            if system_instruction:
-                config.system_instruction = system_instruction
-            if request.max_tokens is not None:
-                config.max_output_tokens = request.max_tokens
-            if request.temperature is not None:
-                config.temperature = request.temperature
-            if request.top_p is not None:
-                config.top_p = request.top_p
-
-            # Make the streaming API call
-            response_stream = self.client.models.generate_content_stream(
+            # Make the streaming API call using async interface
+            response_stream = await self.client.aio.models.generate_content_stream(
                 model=request.model,
                 contents=messages_content,
                 config=config,
             )
 
-            for chunk in response_stream:
-                if hasattr(chunk, 'text') and chunk.text:
+            async for chunk in response_stream:
+                if hasattr(chunk, "text") and chunk.text:
                     yield chunk.text
 
         except Exception as e:
             error_str = str(e).lower()
-            if "api key" in error_str or "auth" in error_str:
+            if "api key" in error_str or "auth" in error_str or "401" in error_str:
                 raise AuthenticationError(f"Gemini authentication failed: {e}")
-            elif "quota" in error_str or "rate" in error_str:
+            elif "quota" in error_str or "rate" in error_str or "429" in error_str:
                 raise ProviderError(f"Gemini rate limit exceeded: {e}")
             else:
                 raise ProviderError(f"Gemini provider error: {e}")
