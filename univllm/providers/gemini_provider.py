@@ -12,6 +12,7 @@ from ..models import (
     ModelCapabilities,
     MessageRole,
     ProviderType,
+    ToolCall,
 )
 from ..exceptions import ProviderError, ModelNotSupportedError, AuthenticationError
 from .base import BaseLLMProvider
@@ -75,6 +76,46 @@ class GeminiProvider(BaseLLMProvider):
             config.temperature = request.temperature
         if request.top_p is not None:
             config.top_p = request.top_p
+
+        # Add tools if provided (convert MCP format to Gemini format)
+        if request.tools:
+            function_declarations = []
+            for tool in request.tools:
+                # Convert MCP tool definition to Gemini function declaration
+                func_decl = {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool.input_schema,
+                }
+                function_declarations.append(func_decl)
+            
+            # Create Tool object with function declarations
+            gemini_tool = types.Tool(function_declarations=function_declarations)
+            config.tools = [gemini_tool]
+            
+            # Handle tool_choice if specified
+            if request.tool_choice:
+                # Gemini uses different format for tool choice
+                if request.tool_choice == "auto":
+                    config.tool_config = types.ToolConfig(
+                        function_calling_config=types.FunctionCallingConfig(
+                            mode=types.FunctionCallingConfig.Mode.AUTO
+                        )
+                    )
+                elif request.tool_choice == "none":
+                    config.tool_config = types.ToolConfig(
+                        function_calling_config=types.FunctionCallingConfig(
+                            mode=types.FunctionCallingConfig.Mode.NONE
+                        )
+                    )
+                else:
+                    # Specific tool name - use ANY mode and filter in post-processing
+                    config.tool_config = types.ToolConfig(
+                        function_calling_config=types.FunctionCallingConfig(
+                            mode=types.FunctionCallingConfig.Mode.ANY,
+                            allowed_function_names=[request.tool_choice]
+                        )
+                    )
 
         return messages_content, config
 
@@ -140,8 +181,49 @@ class GeminiProvider(BaseLLMProvider):
                 config=config,
             )
 
-            # Extract the response
-            content = response.text if hasattr(response, "text") else ""
+            # Extract the response content
+            content = ""
+            tool_calls = None
+            
+            # Check if response has candidates
+            if hasattr(response, "candidates") and response.candidates:
+                candidate = response.candidates[0]
+                
+                # Extract content from parts
+                if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
+                    text_parts = []
+                    function_call_parts = []
+                    
+                    for part in candidate.content.parts:
+                        # Check for text content
+                        if hasattr(part, "text") and part.text:
+                            text_parts.append(part.text)
+                        # Check for function call
+                        elif hasattr(part, "function_call"):
+                            function_call_parts.append(part.function_call)
+                    
+                    content = " ".join(text_parts)
+                    
+                    # Process function calls (tool calls)
+                    if function_call_parts:
+                        tool_calls = []
+                        for fc in function_call_parts:
+                            # Extract arguments from function call
+                            args = {}
+                            if hasattr(fc, "args") and fc.args:
+                                # fc.args is typically a dict-like object
+                                args = dict(fc.args) if hasattr(fc.args, "__iter__") else {}
+                            
+                            tool_calls.append(
+                                ToolCall(
+                                    id=getattr(fc, "id", None),
+                                    name=fc.name,
+                                    arguments=args
+                                )
+                            )
+            else:
+                # Fallback to simple text extraction
+                content = response.text if hasattr(response, "text") else ""
 
             # Extract usage information if available
             usage = None
@@ -167,6 +249,7 @@ class GeminiProvider(BaseLLMProvider):
                 usage=usage,
                 finish_reason=finish_reason,
                 provider=self.provider_type,
+                tool_calls=tool_calls,
             )
 
         except Exception as e:
