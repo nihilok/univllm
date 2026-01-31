@@ -51,7 +51,8 @@ class DeepseekProvider(BaseLLMProvider):
                 f"Model {model} is not supported by Deepseek provider"
             )
 
-        return ModelCapabilities(
+        # Default capabilities
+        capabilities = ModelCapabilities(
             supports_system_messages=True,
             supports_function_calling=True,
             supports_streaming=True,
@@ -59,6 +60,31 @@ class DeepseekProvider(BaseLLMProvider):
             context_window=64000,
             max_tokens=8192,
         )
+
+        # Model-specific capabilities based on latest DeepSeek specifications
+        if model.startswith("deepseek-chat") or model.startswith("deepseek-v3"):
+            # DeepSeek V3.2 chat model (standard conversation mode)
+            capabilities.context_window = 128000
+            capabilities.max_tokens = 8192
+            capabilities.supports_function_calling = True
+        elif model.startswith("deepseek-reasoner"):
+            # DeepSeek V3.2 reasoner (advanced reasoning mode)
+            capabilities.context_window = 128000
+            capabilities.max_tokens = 16384
+            capabilities.supports_function_calling = True
+        elif model.startswith("deepseek-coder"):
+            # DeepSeek Coder models - specialized for code
+            capabilities.context_window = 64000
+            capabilities.max_tokens = 8192
+            capabilities.supports_function_calling = True
+        elif model.startswith("deepseek-vl"):
+            # DeepSeek VL - vision-language model
+            capabilities.context_window = 64000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
+            capabilities.supports_function_calling = True
+
+        return capabilities
 
 
     async def complete(self, request: CompletionRequest) -> CompletionResponse:

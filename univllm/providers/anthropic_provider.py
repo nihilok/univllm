@@ -11,6 +11,7 @@ from ..models import (
     ModelCapabilities,
     MessageRole,
     ProviderType,
+    ToolCall,
 )
 from ..exceptions import ProviderError, ModelNotSupportedError, AuthenticationError
 from .base import BaseLLMProvider
@@ -56,18 +57,38 @@ class AnthropicProvider(BaseLLMProvider):
         )
 
         # Model-specific capabilities based on latest Anthropic specifications
-        if model.startswith("claude-3-7-sonnet"):
-            # Claude 3.7 Sonnet - enhanced version
+        if model.startswith("claude-opus-4-5"):
+            # Claude Opus 4.5 - most capable model (released Nov 2025)
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 64000
+            capabilities.supports_vision = True
+        elif model.startswith("claude-sonnet-4-5"):
+            # Claude Sonnet 4.5 - balanced intelligence and speed (released Sep 2025)
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 64000
+            capabilities.supports_vision = True
+        elif model.startswith("claude-haiku-4-5"):
+            # Claude Haiku 4.5 - fast and cost-effective (released Oct 2025)
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 64000
+            capabilities.supports_vision = True
+        elif model.startswith("claude-opus-4-"):
+            # Claude Opus 4.x series - previous generation
             capabilities.context_window = 200000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
         elif model.startswith("claude-sonnet-4-"):
-            # Claude Sonnet 4.x series - next generation
+            # Claude Sonnet 4.x series - previous generation
             capabilities.context_window = 200000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
-        elif model.startswith("claude-opus-4-1-"):
-            # Claude Opus 4.1 series - most capable model
+        elif model.startswith("claude-haiku-4-"):
+            # Claude Haiku 4.x series - previous generation
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 8192
+            capabilities.supports_vision = True
+        elif model.startswith("claude-3-7-sonnet"):
+            # Claude 3.7 Sonnet - legacy enhanced version
             capabilities.context_window = 200000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
@@ -114,6 +135,24 @@ class AnthropicProvider(BaseLLMProvider):
         if request.stream:
             data["stream"] = request.stream
 
+        # Add tools if provided (Anthropic format)
+        if request.tools:
+            data["tools"] = [
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "input_schema": tool.input_schema,
+                }
+                for tool in request.tools
+            ]
+            if request.tool_choice:
+                # Handle different tool_choice values
+                if request.tool_choice in ("auto", "any", "none"):
+                    data["tool_choice"] = {"type": request.tool_choice}
+                else:
+                    # Assume it's a specific tool name
+                    data["tool_choice"] = {"type": "tool", "name": request.tool_choice}
+
         # Add any extra parameters
         data.update(request.extra_params)
 
@@ -135,10 +174,35 @@ class AnthropicProvider(BaseLLMProvider):
 
             # Extract the response
             content = ""
+            tool_calls = None
+            
             if response.content:
-                content = " ".join(
-                    [block.text for block in response.content if hasattr(block, "text")]
-                )
+                text_blocks = []
+                tool_use_blocks = []
+                
+                for block in response.content:
+                    # Check for text blocks first
+                    if hasattr(block, "type") and block.type == "text" and hasattr(block, "text"):
+                        text_blocks.append(block.text)
+                    elif hasattr(block, "type") and block.type == "tool_use":
+                        tool_use_blocks.append(block)
+                    elif hasattr(block, "text") and not hasattr(block, "type"):
+                        # Fallback for blocks with text but no type attribute
+                        text_blocks.append(block.text)
+                
+                content = " ".join(text_blocks)
+                
+                # Process tool use blocks
+                if tool_use_blocks:
+                    tool_calls = []
+                    for tool_block in tool_use_blocks:
+                        tool_calls.append(
+                            ToolCall(
+                                id=tool_block.id,
+                                name=tool_block.name,
+                                arguments=tool_block.input if hasattr(tool_block, "input") else {}
+                            )
+                        )
 
             usage = (
                 {
@@ -164,6 +228,7 @@ class AnthropicProvider(BaseLLMProvider):
                 usage=usage,
                 finish_reason=response.stop_reason,
                 provider=self.provider_type,
+                tool_calls=tool_calls,
             )
 
         except anthropic.AuthenticationError as e:
