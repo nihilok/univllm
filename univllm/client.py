@@ -151,6 +151,8 @@ class UniversalLLMClient:
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
+        tools: Optional[list] = None,
+        tool_choice: Optional[str] = None,
         **kwargs,
     ) -> CompletionResponse:
         """Generate a completion.
@@ -162,6 +164,8 @@ class UniversalLLMClient:
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             top_p: Top-p sampling parameter
+            tools: List of tool definitions (ToolDefinition objects or dicts)
+            tool_choice: Control tool usage ("auto", "none", or specific tool name)
             **kwargs: Additional provider-specific parameters
 
         Returns:
@@ -194,12 +198,25 @@ class UniversalLLMClient:
             else:
                 processed_messages.append(msg)
 
+        # Convert tools to ToolDefinition objects if they're dicts
+        from .models import ToolDefinition
+        processed_tools = None
+        if tools:
+            processed_tools = []
+            for tool in tools:
+                if isinstance(tool, dict):
+                    processed_tools.append(ToolDefinition(**tool))
+                else:
+                    processed_tools.append(tool)
+
         request = CompletionRequest(
             messages=processed_messages,
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,
             top_p=top_p,
+            tools=processed_tools,
+            tool_choice=tool_choice,
             extra_params=kwargs,
         )
 
