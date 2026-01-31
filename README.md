@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/univllm.svg)](https://badge.fury.io/py/univllm)
 
-A universal Python package that provides a standardised interface for different LLM providers including OpenAI, Anthropic, Deepseek, and Mistral.
+A universal Python package that provides a standardised interface for different LLM providers including OpenAI, Anthropic, Deepseek, Mistral, and Gemini.
 
 ## Features
 
@@ -20,6 +20,7 @@ A universal Python package that provides a standardised interface for different 
 - **Anthropic**: Claude 3.x, 4.x & 4.5 family models  
 - **Deepseek**: DeepSeek V3.2, Chat, Reasoner, Coder & VL models
 - **Mistral**: Mistral Large 3, Ministral 3, Magistral, Codestral & specialized models
+- **Gemini**: Google Gemini 1.5, 2.0 & 2.5 family models
 
 ### Supported Model Prefixes
 The library validates models using simple prefix matching (see `SUPPORTED_MODELS` lists). Any model string that begins with one of these prefixes will be accepted. Provider-specific suffixes or date/version tags (e.g. `-20240229`, `-latest`, `-0125`, minor patch tags) are allowed but not individually validated.
@@ -30,6 +31,7 @@ The library validates models using simple prefix matching (see `SUPPORTED_MODELS
 | Anthropic | `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5`, `claude-opus-4.1`, `claude-sonnet-4-`, `claude-haiku-4-`, `claude-opus-4-`, `claude-code`, `claude-3-7-sonnet-`, `claude-3-5-sonnet-` | Claude 4.5 series launched Sep-Nov 2025. Older variants (e.g. dated `claude-3-*` forms) can be added by extending the list in supported_models.py. |
 | Deepseek | `deepseek-chat`, `deepseek-reasoner`, `deepseek-coder`, `deepseek-vl`, `deepseek-v3`                                                                                        | DeepSeek V3.2 models. `deepseek-reasoner` for advanced reasoning tasks. `deepseek-vl` for vision-language.                                                                                   |
 | Mistral | `mistral-large-3`, `mistral-medium-3`, `mistral-small-3`, `ministral-3-`, `magistral-medium-`, `magistral-small-`, `codestral-`, `devstral-`, `voxtral-`, `mistral-ocr-`, `ocr-3-` | Mistral Large 3 (Dec 2025) flagship multimodal model. Ministral for edge, Codestral for code generation.                                                                                |
+| Gemini | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro`, `gemini-1.5-flash` | Google's Gemini models across multiple versions. |
 
 Note: If you need additional model prefixes, you can locally extend the corresponding `SUPPORTED_MODELS` list in `univllm/supported_models.py` or contribute a PR.
 
@@ -70,6 +72,7 @@ export OPENAI_API_KEY="your-openai-key"
 export ANTHROPIC_API_KEY="your-anthropic-key"
 export DEEPSEEK_API_KEY="your-deepseek-key"
 export MISTRAL_API_KEY="your-mistral-key"
+export GEMINI_API_KEY="your-gemini-key"
 ```
 
 Or pass them directly:

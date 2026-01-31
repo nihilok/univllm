@@ -49,6 +49,10 @@ def test_auto_detection():
     assert client._auto_detect_provider("mistral-large-latest") == ProviderType.MISTRAL
     assert client._auto_detect_provider("mixtral-8x7b") == ProviderType.MISTRAL
 
+    # Test Gemini models
+    assert client._auto_detect_provider("gemini-2.5-pro") == ProviderType.GEMINI
+    assert client._auto_detect_provider("gemini-2.5-flash") == ProviderType.GEMINI
+
 
 def test_unsupported_model():
     """Test handling of unsupported models."""
@@ -64,6 +68,7 @@ def test_provider_types():
     assert ProviderType.ANTHROPIC == "anthropic"
     assert ProviderType.DEEPSEEK == "deepseek"
     assert ProviderType.MISTRAL == "mistral"
+    assert ProviderType.GEMINI == "gemini"
 
 
 def test_message_creation():
@@ -98,6 +103,7 @@ def test_supported_models_structure():
     assert ProviderType.ANTHROPIC in models
     assert ProviderType.DEEPSEEK in models
     assert ProviderType.MISTRAL in models
+    assert ProviderType.GEMINI in models
 
     # Each value should be a list
     for provider, model_list in models.items():

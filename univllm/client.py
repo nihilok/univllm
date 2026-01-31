@@ -17,6 +17,7 @@ from .providers import (
     AnthropicProvider,
     DeepseekProvider,
     MistralProvider,
+    GeminiProvider,
 )
 from .exceptions import ProviderError, ModelNotSupportedError
 
@@ -29,6 +30,7 @@ class UniversalLLMClient:
         ProviderType.ANTHROPIC: AnthropicProvider,
         ProviderType.DEEPSEEK: DeepseekProvider,
         ProviderType.MISTRAL: MistralProvider,
+        ProviderType.GEMINI: GeminiProvider,
     }
 
     def __init__(self, provider: Optional[ProviderType] = None, **kwargs) -> None:
@@ -80,6 +82,8 @@ class UniversalLLMClient:
             return ProviderType.DEEPSEEK
         if any(keyword in model_lower for keyword in ["mistral", "mixtral"]):
             return ProviderType.MISTRAL
+        if "gemini" in model_lower:
+            return ProviderType.GEMINI
 
         raise ModelNotSupportedError(
             f"Could not auto-detect provider for model: {model}"

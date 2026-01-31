@@ -54,6 +54,14 @@ DEEPSEEK_SUPPORTED_MODELS = [
     "deepseek-v3",
 ]
 
+GEMINI_SUPPORTED_MODELS = [
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-pro",
+    "gemini-1.5-flash",
+]
+
 
 def is_potentially_supported_model(model_name: str) -> bool:
     all_supported_models = (
@@ -61,6 +69,7 @@ def is_potentially_supported_model(model_name: str) -> bool:
         + OPENAI_SUPPORTED_MODELS
         + ANTHROPIC_SUPPORTED_MODELS
         + DEEPSEEK_SUPPORTED_MODELS
+        + GEMINI_SUPPORTED_MODELS
     )
     return any(model_name.startswith(prefix) for prefix in all_supported_models)
 
