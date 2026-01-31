@@ -470,7 +470,7 @@ class TestMCPToolCallSimulation:
         # Don't set text attribute so it's treated as function call
         del mock_part.text
         mock_part.function_call = mock_function_call
-        
+
         mock_content = MagicMock()
         mock_content.parts = [mock_part]
 

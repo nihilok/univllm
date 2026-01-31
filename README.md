@@ -258,13 +258,13 @@ async def main():
     # OpenAI
     openai_response = await client.complete(
         messages=[question],
-        model="gpt-4o"
+        model="gpt-5.2"
     )
 
     # Anthropic  
     anthropic_response = await client.complete(
         messages=[question],
-        model="claude-4-sonnet"
+        model="claude-sonnet-4-5"
     )
 
     print(f"OpenAI: {openai_response.content[:100]}...")
