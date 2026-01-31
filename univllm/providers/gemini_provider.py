@@ -99,20 +99,20 @@ class GeminiProvider(BaseLLMProvider):
                 if request.tool_choice == "auto":
                     config.tool_config = types.ToolConfig(
                         function_calling_config=types.FunctionCallingConfig(
-                            mode=types.FunctionCallingConfig.Mode.AUTO
+                            mode="AUTO"
                         )
                     )
                 elif request.tool_choice == "none":
                     config.tool_config = types.ToolConfig(
                         function_calling_config=types.FunctionCallingConfig(
-                            mode=types.FunctionCallingConfig.Mode.NONE
+                            mode="NONE"
                         )
                     )
                 else:
-                    # Specific tool name - use ANY mode and filter in post-processing
+                    # Specific tool name - use ANY mode and filter with allowed_function_names
                     config.tool_config = types.ToolConfig(
                         function_calling_config=types.FunctionCallingConfig(
-                            mode=types.FunctionCallingConfig.Mode.ANY,
+                            mode="ANY",
                             allowed_function_names=[request.tool_choice]
                         )
                     )
