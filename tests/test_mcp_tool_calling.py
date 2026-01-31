@@ -454,6 +454,66 @@ class TestMCPToolCallSimulation:
         assert response.tool_calls[0].name == "get_weather"
         assert response.tool_calls[1].name == "calculate"
 
+    @pytest.mark.asyncio
+    async def test_gemini_tool_call_format(self, weather_tool, monkeypatch):
+        """Test Gemini provider formats tools correctly for API."""
+        client = UniversalLLMClient(provider=ProviderType.GEMINI, api_key="test_key")
+        provider = client.provider_instance
+
+        # Mock Gemini API response with function call
+        mock_function_call = MagicMock()
+        mock_function_call.name = "get_weather"
+        mock_function_call.args = {"location": "New York"}
+        mock_function_call.id = None
+
+        mock_part = MagicMock()
+        # Don't set text attribute so it's treated as function call
+        del mock_part.text
+        mock_part.function_call = mock_function_call
+        
+        mock_content = MagicMock()
+        mock_content.parts = [mock_part]
+
+        mock_candidate = MagicMock()
+        mock_candidate.content = mock_content
+        mock_candidate.finish_reason = "STOP"
+
+        mock_response = MagicMock()
+        mock_response.candidates = [mock_candidate]
+        mock_response.usage_metadata = None
+
+        # Mock the generate_content method
+        async def mock_generate_content(**kwargs):
+            # Verify tools are formatted correctly (Gemini format)
+            if hasattr(kwargs.get("config"), "tools") and kwargs["config"].tools:
+                tools = kwargs["config"].tools
+                assert len(tools) == 1
+                tool = tools[0]
+                assert hasattr(tool, "function_declarations")
+                func_decls = tool.function_declarations
+                assert len(func_decls) == 1
+                func = func_decls[0]
+                assert func.name == "get_weather"
+                assert func.description == weather_tool.description
+            return mock_response
+
+        monkeypatch.setattr(
+            provider.client.aio.models, "generate_content", mock_generate_content
+        )
+
+        # Test with tool
+        response = await client.complete(
+            messages=[{"role": "user", "content": "What's the weather in New York?"}],
+            model="gemini-2.5-flash",
+            tools=[weather_tool]
+        )
+
+        # Verify response contains tool calls
+        assert response.tool_calls is not None
+        assert len(response.tool_calls) == 1
+        assert response.tool_calls[0].name == "get_weather"
+        assert response.tool_calls[0].arguments["location"] == "New York"
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

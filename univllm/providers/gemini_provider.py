@@ -197,12 +197,12 @@ class GeminiProvider(BaseLLMProvider):
                     for part in candidate.content.parts:
                         # Check for text content
                         if hasattr(part, "text") and part.text:
-                            text_parts.append(part.text)
+                            text_parts.append(str(part.text))  # Ensure it's a string
                         # Check for function call
                         elif hasattr(part, "function_call"):
                             function_call_parts.append(part.function_call)
                     
-                    content = " ".join(text_parts)
+                    content = " ".join(text_parts) if text_parts else ""
                     
                     # Process function calls (tool calls)
                     if function_call_parts:
