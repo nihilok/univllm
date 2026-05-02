@@ -6,7 +6,7 @@ including OpenAI, Anthropic, Deepseek, and Mistral.
 """
 
 from .client import UniversalLLMClient
-from .models import ProviderType, ToolDefinition, ToolCall, ToolResult
+from .models import ProviderType, ToolDefinition, ToolCall, ToolResult, Message, MessageRole
 from .exceptions import UniversalLLMError, ProviderError, ModelNotSupportedError
 from .supported_models import is_unsupported_model
 
@@ -16,6 +16,8 @@ __all__ = [
     "ToolDefinition",
     "ToolCall",
     "ToolResult",
+    "Message",
+    "MessageRole",
     "UniversalLLMError",
     "ProviderError",
     "ModelNotSupportedError",
