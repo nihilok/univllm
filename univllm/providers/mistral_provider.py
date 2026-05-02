@@ -1,18 +1,20 @@
 """Mistral provider implementation."""
 
-import os
 import json
-from typing import List, Optional, AsyncIterator
-import httpx
+import os
+from typing import AsyncIterator, List, Optional
 
-from ..supported_models import MISTRAL_SUPPORTED_MODELS
+from mistralai.client import Mistral, errors as mistral_errors
+
+from ..exceptions import AuthenticationError, ModelNotSupportedError, ProviderError
 from ..models import (
     CompletionRequest,
     CompletionResponse,
     ModelCapabilities,
     ProviderType,
+    ToolCall,
 )
-from ..exceptions import ProviderError, ModelNotSupportedError, AuthenticationError
+from ..supported_models import MISTRAL_SUPPORTED_MODELS
 from .base import BaseLLMProvider
 
 
@@ -24,34 +26,28 @@ class MistralProvider(BaseLLMProvider):
     def __init__(
         self, api_key: Optional[str] = None, base_url: Optional[str] = None, **kwargs
     ) -> None:
-        """Initialize Mistral provider.
-
-        Args:
-            api_key: Mistral API key (if not provided, will use MISTRAL_API_KEY env var)
-            base_url: Base URL for Mistral API (default: https://api.mistral.ai)
-            **kwargs: Additional configuration
-        """
+        """Initialize Mistral provider."""
         api_key = api_key or os.getenv("MISTRAL_API_KEY")
         if not api_key:
             raise AuthenticationError("Mistral API key is required")
 
         super().__init__(api_key=api_key, **kwargs)
         self.base_url = base_url or "https://api.mistral.ai"
-        self.client = httpx.AsyncClient()
+        self.client = Mistral(api_key=api_key, server_url=self.base_url)
 
     @property
     def provider_type(self) -> ProviderType:
         """Return the provider type."""
         return ProviderType.MISTRAL
 
-    def get_model_capabilities(self, model: str) -> ModelCapabilities:
+    @classmethod
+    def get_model_capabilities(cls, model: str) -> ModelCapabilities:
         """Get capabilities for a specific Mistral model."""
-        if not self.validate_model(model):
+        if not cls.supports_model(model):
             raise ModelNotSupportedError(
                 f"Model {model} is not supported by Mistral provider"
             )
 
-        # Default capabilities for Mistral models
         capabilities = ModelCapabilities(
             supports_system_messages=True,
             supports_function_calling=True,
@@ -59,61 +55,75 @@ class MistralProvider(BaseLLMProvider):
             supports_vision=False,
         )
 
-        # Model-specific capabilities based on latest Mistral specifications
         if model.startswith("mistral-large-3"):
-            # Mistral Large 3 - flagship multimodal model (Dec 2025)
             capabilities.context_window = 256000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
         elif model.startswith("mistral-medium-3"):
-            # Mistral Medium 3 series - balanced performance
             capabilities.context_window = 128000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
         elif model.startswith("mistral-small-3"):
-            # Mistral Small 3 series - efficient models
             capabilities.context_window = 128000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
         elif model.startswith("ministral-3-"):
-            # Ministral 3 series - compact models for edge
             capabilities.context_window = 128000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
         elif model.startswith("magistral-medium-"):
-            # Magistral Medium series - reasoning optimized
             capabilities.context_window = 128000
             capabilities.max_tokens = 8192
         elif model.startswith("magistral-small-"):
-            # Magistral Small series - reasoning optimized
             capabilities.context_window = 64000
             capabilities.max_tokens = 8192
         elif model.startswith("codestral-"):
-            # Codestral series - code-specialized models (Jan 2025)
             capabilities.context_window = 64000
             capabilities.max_tokens = 8192
-            capabilities.supports_function_calling = True  # Enhanced for code generation
         elif model.startswith("devstral-"):
-            # Devstral series - code agents
             capabilities.context_window = 64000
             capabilities.max_tokens = 8192
-            capabilities.supports_function_calling = True
         elif model.startswith("voxtral-"):
-            # Voxtral series - audio/speech models
             capabilities.context_window = 64000
             capabilities.max_tokens = 8192
-            capabilities.supports_vision = False
         elif model.startswith("mistral-ocr-") or model.startswith("ocr-3-"):
-            # Mistral OCR series - document OCR models
             capabilities.context_window = 64000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True
         elif model.startswith("mistral-small-") or model.startswith("mistral-medium-"):
-            # Legacy Mistral Small/Medium series
             capabilities.context_window = 32000
             capabilities.max_tokens = 8192
 
         return capabilities
+
+    def prepare_request(self, request: CompletionRequest) -> dict:
+        """Prepare request data for the Mistral SDK."""
+        result = super().prepare_request(request)
+
+        if request.tools:
+            result["tools"] = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.input_schema,
+                    },
+                }
+                for tool in request.tools
+            ]
+            if request.tool_choice:
+                result["tool_choice"] = request.tool_choice
+
+        return result
+
+    @staticmethod
+    def _coerce_text_content(content: object) -> str:
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            return "".join(part.text for part in content if hasattr(part, "text"))
+        return str(content) if content else ""
 
     async def complete(self, request: CompletionRequest) -> CompletionResponse:
         """Generate a completion using Mistral."""
@@ -123,53 +133,55 @@ class MistralProvider(BaseLLMProvider):
             )
 
         try:
-            # Prepare the request data
-            data = self.prepare_request(request)
+            response = await self.client.chat.complete_async(**self.prepare_request(request))
+            choice = response.choices[0] if response.choices else None
+            message = choice.message if choice else None
+            content = self._coerce_text_content(getattr(message, "content", ""))
 
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            }
+            tool_calls = None
+            if message and getattr(message, "tool_calls", None):
+                tool_calls = []
+                for tc in message.tool_calls:
+                    raw_arguments = getattr(tc.function, "arguments", None)
+                    if isinstance(raw_arguments, str):
+                        try:
+                            arguments = json.loads(raw_arguments)
+                        except json.JSONDecodeError as e:
+                            arguments = {"_parse_error": str(e), "_raw": raw_arguments}
+                    else:
+                        arguments = raw_arguments or {}
 
-            # Make the API call
-            response = await self.client.post(
-                f"{self.base_url}/v1/chat/completions", json=data, headers=headers
-            )
-            response.raise_for_status()
+                    tool_calls.append(
+                        ToolCall(
+                            id=getattr(tc, "id", None),
+                            name=tc.function.name,
+                            arguments=arguments,
+                        )
+                    )
 
-            result = response.json()
-
-            # Extract the response
-            content = (
-                result["choices"][0]["message"]["content"]
-                if result.get("choices")
-                else ""
-            )
-            usage = result.get("usage", {})
-
+            usage = getattr(response, "usage", None)
             return CompletionResponse(
                 content=content,
-                model=result.get("model", request.model),
+                model=getattr(response, "model", request.model),
                 usage={
-                    "prompt_tokens": usage.get("prompt_tokens", 0),
-                    "completion_tokens": usage.get("completion_tokens", 0),
-                    "total_tokens": usage.get("total_tokens", 0),
+                    "prompt_tokens": getattr(usage, "prompt_tokens", 0),
+                    "completion_tokens": getattr(usage, "completion_tokens", 0),
+                    "total_tokens": getattr(usage, "total_tokens", 0),
                 }
                 if usage
                 else None,
-                finish_reason=result["choices"][0].get("finish_reason")
-                if result.get("choices")
-                else None,
+                finish_reason=getattr(choice, "finish_reason", None),
                 provider=self.provider_type,
+                tool_calls=tool_calls,
             )
 
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401:
+        except mistral_errors.SDKError as e:
+            status_code = getattr(getattr(e, "raw_response", None), "status_code", None)
+            if status_code == 401:
                 raise AuthenticationError(f"Mistral authentication failed: {e}")
-            elif e.response.status_code == 429:
+            if status_code == 429:
                 raise ProviderError(f"Mistral rate limit exceeded: {e}")
-            else:
-                raise ProviderError(f"Mistral API error: {e}")
+            raise ProviderError(f"Mistral API error: {e}")
         except Exception as e:
             raise ProviderError(f"Mistral provider error: {e}")
 
@@ -181,53 +193,35 @@ class MistralProvider(BaseLLMProvider):
             )
 
         try:
-            # Prepare the request data with streaming enabled
             data = self.prepare_request(request)
-            data["stream"] = True
+            data.pop("stream", None)
+            stream = await self.client.chat.stream_async(**data)
 
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            }
+            async for event in stream:
+                chunk = getattr(event, "data", None)
+                if not chunk or not getattr(chunk, "choices", None):
+                    continue
 
-            # Make the streaming API call
-            async with self.client.stream(
-                "POST",
-                f"{self.base_url}/v1/chat/completions",
-                json=data,
-                headers=headers,
-            ) as response:
-                response.raise_for_status()
+                delta = chunk.choices[0].delta
+                text = self._coerce_text_content(getattr(delta, "content", None))
+                if text:
+                    yield text
 
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        chunk_data = line[6:]  # Remove "data: " prefix
-                        if chunk_data.strip() == "[DONE]":
-                            break
-
-                        try:
-                            chunk = json.loads(chunk_data)
-                            if chunk.get("choices") and chunk["choices"][0].get(
-                                "delta", {}
-                            ).get("content"):
-                                yield chunk["choices"][0]["delta"]["content"]
-                        except json.JSONDecodeError:
-                            continue
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401:
+        except mistral_errors.SDKError as e:
+            status_code = getattr(getattr(e, "raw_response", None), "status_code", None)
+            if status_code == 401:
                 raise AuthenticationError(f"Mistral authentication failed: {e}")
-            elif e.response.status_code == 429:
+            if status_code == 429:
                 raise ProviderError(f"Mistral rate limit exceeded: {e}")
-            else:
-                raise ProviderError(f"Mistral API error: {e}")
+            raise ProviderError(f"Mistral API error: {e}")
         except Exception as e:
             raise ProviderError(f"Mistral provider error: {e}")
 
     async def __aenter__(self):
         """Async context manager entry."""
+        await self.client.__aenter__()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
-        await self.client.aclose()
+        await self.client.__aexit__(exc_type, exc_val, exc_tb)

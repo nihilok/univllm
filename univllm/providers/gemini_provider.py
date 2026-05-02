@@ -119,9 +119,10 @@ class GeminiProvider(BaseLLMProvider):
 
         return messages_content, config
 
-    def get_model_capabilities(self, model: str) -> ModelCapabilities:
+    @classmethod
+    def get_model_capabilities(cls, model: str) -> ModelCapabilities:
         """Get capabilities for a specific Gemini model."""
-        if not self.validate_model(model):
+        if not cls.supports_model(model):
             raise ModelNotSupportedError(
                 f"Model {model} is not supported by Gemini provider"
             )

@@ -14,8 +14,8 @@ async def basic_completion_example():
 
     # The client will auto-detect the provider based on the model name
     response = await client.complete(
-        messages=["What is the capital of France?"],
-        model="gpt-3.5-turbo",  # Will auto-detect OpenAI
+        messages=[{"role": "user", "content": "What is the capital of France?"}],
+        model="gpt-4o",  # Will auto-detect OpenAI
     )
 
     print(f"Response: {response.content}")
@@ -35,7 +35,7 @@ async def explicit_provider_example():
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": "Explain quantum computing briefly."},
         ],
-        model="claude-3-sonnet-20240229",
+        model="claude-sonnet-4-5",
         max_tokens=150,
         temperature=0.7,
     )
@@ -49,8 +49,8 @@ async def streaming_example():
 
     print("Streaming response:")
     async for chunk in client.stream_complete(
-        messages=["Tell me a short story about a robot."],
-        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": "Tell me a short story about a robot."}],
+        model="gpt-4o",
         max_tokens=200,
     ):
         print(chunk, end="", flush=True)
@@ -69,15 +69,21 @@ async def multi_provider_example():
 
     # Compare responses from different providers
     question = "What is machine learning?"
+    openai_client = UniversalLLMClient()
+    anthropic_client = UniversalLLMClient()
 
     # OpenAI
-    openai_response = await client.complete(messages=[question], model="gpt-3.5-turbo")
+    openai_response = await openai_client.complete(
+        messages=[{"role": "user", "content": question}],
+        model="gpt-4o",
+    )
     print(f"OpenAI: {openai_response.content[:100]}...")
 
     # Anthropic (if API key is available)
     try:
-        anthropic_response = await client.complete(
-            messages=[question], model="claude-3-haiku-20240307"
+        anthropic_response = await anthropic_client.complete(
+            messages=[{"role": "user", "content": question}],
+            model="claude-haiku-4-5",
         )
         print(f"Anthropic: {anthropic_response.content[:100]}...")
     except Exception as e:
@@ -90,9 +96,9 @@ async def model_capabilities_example():
 
     models_to_check = [
         "gpt-4",
-        "claude-3-opus-20240229",
+        "claude-sonnet-4-5",
         "deepseek-chat",
-        "mistral-large-latest",
+        "mistral-large-3",
     ]
 
     for model in models_to_check:
@@ -118,14 +124,20 @@ async def error_handling_example():
 
     try:
         # This will fail if no API key is set
-        response = await client.complete(messages=["Hello"], model="gpt-3.5-turbo")
+        response = await client.complete(
+            messages=[{"role": "user", "content": "Hello"}],
+            model="gpt-4o",
+        )
         print(f"Success: {response.content}")
     except Exception as e:
         print(f"Error: {type(e).__name__}: {e}")
 
     try:
         # This will fail with unsupported model
-        response = await client.complete(messages=["Hello"], model="nonexistent-model")
+        response = await client.complete(
+            messages=[{"role": "user", "content": "Hello"}],
+            model="nonexistent-model",
+        )
     except Exception as e:
         print(f"Error: {type(e).__name__}: {e}")
 

@@ -6,9 +6,26 @@ including OpenAI, Anthropic, Deepseek, and Mistral.
 """
 
 from .client import UniversalLLMClient
-from .models import ProviderType, ToolDefinition, ToolCall, ToolResult, Message, MessageRole
-from .exceptions import UniversalLLMError, ProviderError, ModelNotSupportedError
-from .supported_models import is_unsupported_model
+from .exceptions import (
+    AuthenticationError,
+    ConfigurationError,
+    ModelNotSupportedError,
+    ProviderError,
+    UniversalLLMError,
+)
+from .models import (
+    CompletionResponse,
+    GeneratedImage,
+    ImageGenerationResponse,
+    Message,
+    MessageRole,
+    ModelCapabilities,
+    ProviderType,
+    ToolCall,
+    ToolDefinition,
+    ToolResult,
+)
+from .providers import BaseLLMProvider
 
 __all__ = [
     "UniversalLLMClient",
@@ -18,8 +35,14 @@ __all__ = [
     "ToolResult",
     "Message",
     "MessageRole",
+    "ModelCapabilities",
+    "CompletionResponse",
+    "GeneratedImage",
+    "ImageGenerationResponse",
+    "BaseLLMProvider",
     "UniversalLLMError",
     "ProviderError",
     "ModelNotSupportedError",
-    "is_unsupported_model",
+    "AuthenticationError",
+    "ConfigurationError",
 ]

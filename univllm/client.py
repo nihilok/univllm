@@ -1,25 +1,27 @@
 """Universal LLM client with factory pattern for provider selection."""
 
-from typing import Dict, Optional, AsyncIterator
+from typing import AsyncIterator, Dict, Optional
+
+from .exceptions import ConfigurationError, ModelNotSupportedError, ProviderError
 from .models import (
     CompletionRequest,
     CompletionResponse,
-    ModelCapabilities,
-    Message,
-    MessageRole,
-    ProviderType,
     ImageGenerationRequest,
     ImageGenerationResponse,
+    Message,
+    MessageRole,
+    ModelCapabilities,
+    ProviderType,
+    ToolDefinition,
 )
 from .providers import (
-    BaseLLMProvider,
-    OpenAIProvider,
     AnthropicProvider,
+    BaseLLMProvider,
     DeepseekProvider,
-    MistralProvider,
     GeminiProvider,
+    MistralProvider,
+    OpenAIProvider,
 )
-from .exceptions import ProviderError, ModelNotSupportedError
 
 
 class UniversalLLMClient:
@@ -60,10 +62,83 @@ class UniversalLLMClient:
         provider_class = self._provider_classes[provider]
         self.provider_instance = provider_class(**kwargs)
         self.provider_type = provider
+        self.config = kwargs
+
+    def _resolve_provider(
+        self, model: str, provider: Optional[ProviderType] = None
+    ) -> ProviderType:
+        """Resolve the provider for a request."""
+        return provider or self._auto_detect_provider(model)
+
+    def _ensure_provider(self, provider: ProviderType) -> BaseLLMProvider:
+        """Return the active provider instance, rejecting implicit provider switches."""
+        if not self.provider_instance:
+            self._initialize_provider(provider, **self.config)
+            return self.provider_instance
+
+        if self.provider_type != provider:
+            raise ConfigurationError(
+                "This client is already initialized for "
+                f"{self.provider_type.value}. Use set_provider() or create a new "
+                f"client for {provider.value}."
+            )
+
+        return self.provider_instance
+
+    @staticmethod
+    def _normalize_messages(messages: list) -> list[Message]:
+        """Normalize user-supplied messages to Message models."""
+        processed_messages = []
+
+        for msg in messages:
+            if isinstance(msg, str):
+                raise ValueError(
+                    "messages must be Message objects or {'role', 'content'} dicts; "
+                    "raw strings are not supported."
+                )
+
+            if isinstance(msg, Message):
+                processed_messages.append(msg)
+                continue
+
+            if isinstance(msg, dict):
+                try:
+                    processed_messages.append(
+                        Message(role=MessageRole(msg["role"]), content=msg["content"])
+                    )
+                except KeyError as exc:
+                    raise ValueError(
+                        "message dictionaries must include 'role' and 'content'"
+                    ) from exc
+                continue
+
+            raise TypeError(
+                "messages must contain only Message objects or {'role', 'content'} dicts"
+            )
+
+        return processed_messages
+
+    @staticmethod
+    def _normalize_tools(tools: Optional[list]) -> Optional[list[ToolDefinition]]:
+        """Normalize user-supplied tools to ToolDefinition models."""
+        if not tools:
+            return None
+
+        processed_tools = []
+        for tool in tools:
+            if isinstance(tool, ToolDefinition):
+                processed_tools.append(tool)
+            elif isinstance(tool, dict):
+                processed_tools.append(ToolDefinition(**tool))
+            else:
+                raise TypeError(
+                    "tools must contain only ToolDefinition objects or MCP-compatible dicts"
+                )
+
+        return processed_tools
 
     def _auto_detect_provider(self, model: str) -> ProviderType:
         """Auto-detect provider based on model name without instantiation."""
-        # First, try class-level supported model checks
         for provider_type, provider_class in self._provider_classes.items():
             try:
                 if provider_class.supports_model(model):  # type: ignore[attr-defined]
@@ -71,7 +146,6 @@ class UniversalLLMClient:
             except Exception:
                 continue
 
-        # Fallback heuristics
         model_lower = model.lower()
 
         if any(keyword in model_lower for keyword in ["gpt", "openai"]):
@@ -98,25 +172,19 @@ class UniversalLLMClient:
         """
         self._initialize_provider(provider, **kwargs)
 
+    @classmethod
     def get_supported_models(
-        self, provider: Optional[ProviderType] = None
+        cls, provider: Optional[ProviderType] = None
     ) -> Dict[ProviderType, list]:
-        """Get supported models for all or specific provider using class-level data.
-
-        Args:
-            provider: Specific provider to get models for (if None, gets all)
-
-        Returns:
-            Dictionary mapping provider types to their supported models
-        """
+        """Get supported models for all or a specific provider."""
         if provider:
-            if provider not in self._provider_classes:
+            if provider not in cls._provider_classes:
                 raise ProviderError(f"Unsupported provider: {provider}")
-            provider_class = self._provider_classes[provider]
+            provider_class = cls._provider_classes[provider]
             return {provider: list(getattr(provider_class, "SUPPORTED_MODELS", []))}
 
         all_models: Dict[ProviderType, list] = {}
-        for provider_type, provider_class in self._provider_classes.items():
+        for provider_type, provider_class in cls._provider_classes.items():
             all_models[provider_type] = list(
                 getattr(provider_class, "SUPPORTED_MODELS", [])
             )
@@ -126,22 +194,13 @@ class UniversalLLMClient:
     def get_model_capabilities(
         self, model: str, provider: Optional[ProviderType] = None
     ) -> ModelCapabilities:
-        """Get capabilities for a specific model.
+        """Get capabilities for a specific model."""
+        resolved_provider = self._resolve_provider(model, provider)
+        if resolved_provider not in self._provider_classes:
+            raise ProviderError(f"Unsupported provider: {resolved_provider}")
 
-        Args:
-            model: Model identifier
-            provider: Provider to use (if not specified, will auto-detect)
-
-        Returns:
-            Model capabilities
-        """
-        if not provider:
-            provider = self._auto_detect_provider(model)
-
-        if not self.provider_instance or self.provider_type != provider:
-            self._initialize_provider(provider, **self.config)
-
-        return self.provider_instance.get_model_capabilities(model)
+        provider_class = self._provider_classes[resolved_provider]
+        return provider_class.get_model_capabilities(model)
 
     async def complete(
         self,
@@ -155,59 +214,11 @@ class UniversalLLMClient:
         tool_choice: Optional[str] = None,
         **kwargs,
     ) -> CompletionResponse:
-        """Generate a completion.
-
-        Args:
-            messages: List of messages (can be strings or Message objects)
-            model: Model identifier
-            provider: Provider to use (if not specified, will auto-detect)
-            max_tokens: Maximum tokens to generate
-            temperature: Sampling temperature
-            top_p: Top-p sampling parameter
-            tools: List of tool definitions (ToolDefinition objects or dicts)
-            tool_choice: Control tool usage ("auto", "none", or specific tool name)
-            **kwargs: Additional provider-specific parameters
-
-        Returns:
-            Completion response
-        """
-        if not provider:
-            provider = self._auto_detect_provider(model)
-
-        if not self.provider_instance or self.provider_type != provider:
-            self._initialize_provider(provider, **self.config)
-
-        # Convert messages to Message objects if they're strings
-        processed_messages = []
-        for i, msg in enumerate(messages):
-            if isinstance(msg, str):
-                # First message is system if only one, otherwise alternate user/assistant
-                if i == 0 and len(messages) == 1:
-                    role = MessageRole.USER
-                elif i == 0:
-                    role = MessageRole.SYSTEM
-                elif i % 2 == 1:
-                    role = MessageRole.USER
-                else:
-                    role = MessageRole.ASSISTANT
-                processed_messages.append(Message(role=role, content=msg))
-            elif isinstance(msg, dict):
-                processed_messages.append(
-                    Message(role=MessageRole(msg["role"]), content=msg["content"])
-                )
-            else:
-                processed_messages.append(msg)
-
-        # Convert tools to ToolDefinition objects if they're dicts
-        from .models import ToolDefinition
-        processed_tools = None
-        if tools:
-            processed_tools = []
-            for tool in tools:
-                if isinstance(tool, dict):
-                    processed_tools.append(ToolDefinition(**tool))
-                else:
-                    processed_tools.append(tool)
+        """Generate a completion."""
+        resolved_provider = self._resolve_provider(model, provider)
+        processed_messages = self._normalize_messages(messages)
+        processed_tools = self._normalize_tools(tools)
+        provider_instance = self._ensure_provider(resolved_provider)
 
         request = CompletionRequest(
             messages=processed_messages,
@@ -220,7 +231,7 @@ class UniversalLLMClient:
             extra_params=kwargs,
         )
 
-        return await self.provider_instance.complete(request)
+        return await provider_instance.complete(request)
 
     async def stream_complete(
         self,
@@ -230,48 +241,15 @@ class UniversalLLMClient:
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
+        tools: Optional[list] = None,
+        tool_choice: Optional[str] = None,
         **kwargs,
     ) -> AsyncIterator[str]:
-        """Generate a streaming completion.
-
-        Args:
-            messages: List of messages (can be strings or Message objects)
-            model: Model identifier
-            provider: Provider to use (if not specified, will auto-detect)
-            max_tokens: Maximum tokens to generate
-            temperature: Sampling temperature
-            top_p: Top-p sampling parameter
-            **kwargs: Additional provider-specific parameters
-
-        Yields:
-            Chunks of the completion
-        """
-        if not provider:
-            provider = self._auto_detect_provider(model)
-
-        if not self.provider_instance or self.provider_type != provider:
-            self._initialize_provider(provider, **self.config)
-
-        # Convert messages to Message objects if they're strings
-        processed_messages = []
-        for i, msg in enumerate(messages):
-            if isinstance(msg, str):
-                # First message is system if only one, otherwise alternate user/assistant
-                if i == 0 and len(messages) == 1:
-                    role = MessageRole.USER
-                elif i == 0:
-                    role = MessageRole.SYSTEM
-                elif i % 2 == 1:
-                    role = MessageRole.USER
-                else:
-                    role = MessageRole.ASSISTANT
-                processed_messages.append(Message(role=role, content=msg))
-            elif isinstance(msg, dict):
-                processed_messages.append(
-                    Message(role=MessageRole(msg["role"]), content=msg["content"])
-                )
-            else:
-                processed_messages.append(msg)
+        """Generate a streaming completion."""
+        resolved_provider = self._resolve_provider(model, provider)
+        processed_messages = self._normalize_messages(messages)
+        processed_tools = self._normalize_tools(tools)
+        provider_instance = self._ensure_provider(resolved_provider)
 
         request = CompletionRequest(
             messages=processed_messages,
@@ -280,10 +258,12 @@ class UniversalLLMClient:
             temperature=temperature,
             top_p=top_p,
             stream=True,
+            tools=processed_tools,
+            tool_choice=tool_choice,
             extra_params=kwargs,
         )
 
-        async for chunk in self.provider_instance.stream_complete(request):
+        async for chunk in provider_instance.stream_complete(request):
             yield chunk
 
     async def generate_image(
@@ -295,14 +275,9 @@ class UniversalLLMClient:
         response_format: str = "b64_json",
         **kwargs,
     ) -> ImageGenerationResponse:
-        """Generate an image using a vision/image capable model.
-
-        Size is optional; provider will apply model-specific defaults/validation.
-        """
-        if not provider:
-            provider = self._auto_detect_provider(model)
-        if not self.provider_instance or self.provider_type != provider:
-            self._initialize_provider(provider, **self.config)
+        """Generate an image using a vision/image capable model."""
+        resolved_provider = self._resolve_provider(model, provider)
+        provider_instance = self._ensure_provider(resolved_provider)
         request = ImageGenerationRequest(
             prompt=prompt,
             model=model,
@@ -310,4 +285,4 @@ class UniversalLLMClient:
             response_format=response_format,
             extra_params=kwargs,
         )
-        return await self.provider_instance.generate_image(request)
+        return await provider_instance.generate_image(request)

@@ -45,8 +45,9 @@ class BaseLLMProvider(ABC):
         """Class-level check if model is supported without instantiation."""
         return any(model.startswith(supported) for supported in cls.SUPPORTED_MODELS)
 
+    @classmethod
     @abstractmethod
-    def get_model_capabilities(self, model: str) -> ModelCapabilities:
+    def get_model_capabilities(cls, model: str) -> ModelCapabilities:
         """Get capabilities for a specific model.
 
         Args:

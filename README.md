@@ -23,7 +23,7 @@ A universal Python package that provides a standardised interface for different 
 - **Gemini**: Google Gemini 1.5, 2.0 & 2.5 family models
 
 ### Supported Model Prefixes
-The library validates models using simple prefix matching (see `SUPPORTED_MODELS` lists). Any model string that begins with one of these prefixes will be accepted. Provider-specific suffixes or date/version tags (e.g. `-20240229`, `-latest`, `-0125`, minor patch tags) are allowed but not individually validated.
+Provider auto-detection uses simple prefix matching (see `SUPPORTED_MODELS` lists). Known prefixes are used as hints for provider selection and capability metadata, but request models accept arbitrary model strings so new provider releases are not rejected before an API call. Provider-specific suffixes or date/version tags (e.g. `-20240229`, `-latest`, `-0125`, minor patch tags) are allowed.
 
 | Provider | Accepted Prefixes (Exact / Prefix Match)                                                                                                                                   | Notes                                                                                                     |
 |----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
@@ -33,7 +33,7 @@ The library validates models using simple prefix matching (see `SUPPORTED_MODELS
 | Mistral | `mistral-large-3`, `mistral-medium-3`, `mistral-small-3`, `ministral-3-`, `magistral-medium-`, `magistral-small-`, `codestral-`, `devstral-`, `voxtral-`, `mistral-ocr-`, `ocr-3-` | Mistral Large 3 (Dec 2025) flagship multimodal model. Ministral for edge, Codestral for code generation.                                                                                |
 | Gemini | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro`, `gemini-1.5-flash` | Google's Gemini models across multiple versions. |
 
-Note: If you need additional model prefixes, you can locally extend the corresponding `SUPPORTED_MODELS` list in `univllm/supported_models.py` or contribute a PR.
+Note: If a model name is not yet in the prefix lists, you can still pass it directly when you also know the provider. Adding new prefixes mainly improves auto-detection and capability lookup.
 
 ## Installation
 
@@ -53,7 +53,7 @@ async def main():
 
     # Auto-detects provider based on model name
     response = await client.complete(
-        messages=["What is the capital of France?"],
+        messages=[{"role": "user", "content": "What is the capital of France?"}],
         model="gpt-5.2"
     )
 
@@ -128,7 +128,7 @@ async def main():
     client = UniversalLLMClient()
 
     async for chunk in client.stream_complete(
-            messages=["Tell me a short story about a robot."],
+            messages=[{"role": "user", "content": "Tell me a short story about a robot."}],
             model="claude-sonnet-4-5",
             max_tokens=200
     ):
@@ -255,15 +255,17 @@ async def main():
 
     question = "What is machine learning?"
 
-    # OpenAI
-    openai_response = await client.complete(
-        messages=[question],
+    # Use separate clients or call set_provider() when switching providers.
+    openai_client = UniversalLLMClient()
+    anthropic_client = UniversalLLMClient()
+
+    openai_response = await openai_client.complete(
+        messages=[{"role": "user", "content": question}],
         model="gpt-5.2"
     )
 
-    # Anthropic  
-    anthropic_response = await client.complete(
-        messages=[question],
+    anthropic_response = await anthropic_client.complete(
+        messages=[{"role": "user", "content": question}],
         model="claude-sonnet-4-5"
     )
 

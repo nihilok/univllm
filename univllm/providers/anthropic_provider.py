@@ -41,9 +41,10 @@ class AnthropicProvider(BaseLLMProvider):
         """Return the provider type."""
         return ProviderType.ANTHROPIC
 
-    def get_model_capabilities(self, model: str) -> ModelCapabilities:
+    @classmethod
+    def get_model_capabilities(cls, model: str) -> ModelCapabilities:
         """Get capabilities for a specific Anthropic model."""
-        if not self.validate_model(model):
+        if not cls.supports_model(model):
             raise ModelNotSupportedError(
                 f"Model {model} is not supported by Anthropic provider"
             )
@@ -200,7 +201,7 @@ class AnthropicProvider(BaseLLMProvider):
                         # Fallback for blocks with text but no type attribute
                         text_blocks.append(block.text)
                 
-                content = " ".join(text_blocks)
+                content = "".join(text_blocks)
                 
                 # Process tool use blocks
                 if tool_use_blocks:

@@ -45,9 +45,10 @@ class OpenAIProvider(BaseLLMProvider):
         """Return the provider type."""
         return ProviderType.OPENAI
 
-    def get_model_capabilities(self, model: str) -> ModelCapabilities:
+    @classmethod
+    def get_model_capabilities(cls, model: str) -> ModelCapabilities:
         """Get capabilities for a specific OpenAI model."""
-        if not self.validate_model(model):
+        if not cls.supports_model(model):
             raise ModelNotSupportedError(
                 f"Model {model} is not supported by OpenAI provider"
             )
