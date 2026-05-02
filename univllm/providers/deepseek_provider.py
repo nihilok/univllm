@@ -62,23 +62,33 @@ class DeepseekProvider(BaseLLMProvider):
         )
 
         # Model-specific capabilities based on latest DeepSeek specifications
-        if model.startswith("deepseek-chat") or model.startswith("deepseek-v3"):
-            # DeepSeek V3.2 chat model (standard conversation mode)
+        if model.startswith("deepseek-v4-flash"):
+            # DeepSeek V4 Flash - fast, efficient model (new ID from July 2026)
+            capabilities.context_window = 128000
+            capabilities.max_tokens = 8192
+            capabilities.supports_function_calling = True
+        elif model.startswith("deepseek-v4-pro"):
+            # DeepSeek V4 Pro - most capable model (new ID from July 2026)
+            capabilities.context_window = 128000
+            capabilities.max_tokens = 16384
+            capabilities.supports_function_calling = True
+        elif model.startswith("deepseek-chat") or model.startswith("deepseek-v3"):
+            # DeepSeek V3.2 chat model (legacy, retiring July 24 2026)
             capabilities.context_window = 128000
             capabilities.max_tokens = 8192
             capabilities.supports_function_calling = True
         elif model.startswith("deepseek-reasoner"):
-            # DeepSeek V3.2 reasoner (advanced reasoning mode)
+            # DeepSeek V3.2 reasoner (legacy, retiring July 24 2026)
             capabilities.context_window = 128000
             capabilities.max_tokens = 16384
             capabilities.supports_function_calling = True
         elif model.startswith("deepseek-coder"):
-            # DeepSeek Coder models - specialized for code
+            # DeepSeek Coder models - specialized for code (legacy, retiring July 24 2026)
             capabilities.context_window = 64000
             capabilities.max_tokens = 8192
             capabilities.supports_function_calling = True
         elif model.startswith("deepseek-vl"):
-            # DeepSeek VL - vision-language model
+            # DeepSeek VL - vision-language model (legacy, retiring July 24 2026)
             capabilities.context_window = 64000
             capabilities.max_tokens = 8192
             capabilities.supports_vision = True

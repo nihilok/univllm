@@ -34,9 +34,15 @@ OPENAI_SUPPORTED_MODELS = [
 ]
 
 ANTHROPIC_SUPPORTED_MODELS = [
+    # Claude 4.7 series (64k output tokens)
+    "claude-opus-4-7",
+    # Claude 4.6 series (64k output tokens)
+    "claude-sonnet-4-6",
+    # Claude 4.5 series (64k output tokens)
     "claude-opus-4-5",
     "claude-sonnet-4-5",
     "claude-haiku-4-5",
+    # Claude 4.x series — catch-all prefixes for future patch versions
     "claude-opus-4-",
     "claude-sonnet-4-",
     "claude-haiku-4-",
@@ -47,6 +53,10 @@ ANTHROPIC_SUPPORTED_MODELS = [
 ]
 
 DEEPSEEK_SUPPORTED_MODELS = [
+    # New model IDs (replacing legacy ones from July 24 2026)
+    "deepseek-v4-flash",
+    "deepseek-v4-pro",
+    # Legacy model IDs (retiring July 24 2026 — keep until then)
     "deepseek-chat",
     "deepseek-reasoner",
     "deepseek-coder",

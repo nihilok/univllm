@@ -57,7 +57,17 @@ class AnthropicProvider(BaseLLMProvider):
         )
 
         # Model-specific capabilities based on latest Anthropic specifications
-        if model.startswith("claude-opus-4-5"):
+        if model.startswith("claude-opus-4-7"):
+            # Claude Opus 4.7 - most capable model
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 64000
+            capabilities.supports_vision = True
+        elif model.startswith("claude-sonnet-4-6"):
+            # Claude Sonnet 4.6 - balanced intelligence and speed
+            capabilities.context_window = 200000
+            capabilities.max_tokens = 64000
+            capabilities.supports_vision = True
+        elif model.startswith("claude-opus-4-5"):
             # Claude Opus 4.5 - most capable model (released Nov 2025)
             capabilities.context_window = 200000
             capabilities.max_tokens = 64000
@@ -73,19 +83,19 @@ class AnthropicProvider(BaseLLMProvider):
             capabilities.max_tokens = 64000
             capabilities.supports_vision = True
         elif model.startswith("claude-opus-4-"):
-            # Claude Opus 4.x series - previous generation
+            # Claude Opus 4.x series - catch-all for future patch versions
             capabilities.context_window = 200000
-            capabilities.max_tokens = 8192
+            capabilities.max_tokens = 64000
             capabilities.supports_vision = True
         elif model.startswith("claude-sonnet-4-"):
-            # Claude Sonnet 4.x series - previous generation
+            # Claude Sonnet 4.x series - catch-all for future patch versions
             capabilities.context_window = 200000
-            capabilities.max_tokens = 8192
+            capabilities.max_tokens = 64000
             capabilities.supports_vision = True
         elif model.startswith("claude-haiku-4-"):
-            # Claude Haiku 4.x series - previous generation
+            # Claude Haiku 4.x series - catch-all for future patch versions
             capabilities.context_window = 200000
-            capabilities.max_tokens = 8192
+            capabilities.max_tokens = 64000
             capabilities.supports_vision = True
         elif model.startswith("claude-3-7-sonnet"):
             # Claude 3.7 Sonnet - legacy enhanced version
